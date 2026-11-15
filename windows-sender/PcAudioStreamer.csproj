@@ -9,7 +9,17 @@
     <AssemblyName>PcAudioStreamer</AssemblyName>
     <RootNamespace>PcAudioStreamer</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Product>AirPulse — PC to iPhone Audio Streamer</Product>
+    <AssemblyTitle>AirPulse PC Audio Streamer</AssemblyTitle>
+    <Company>AirPulse Audio</Company>
+    <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\logo.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Concentus" Version="2.2.2" />

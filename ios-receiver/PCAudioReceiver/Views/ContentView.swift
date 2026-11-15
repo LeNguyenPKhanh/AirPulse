@@ -22,7 +22,7 @@ struct ContentView: View {
                 .padding(16)
             }
             .background(Color(red: 0.06, green: 0.09, blue: 0.16).ignoresSafeArea())
-            .navigationTitle("PC Audio Bridge")
+            .navigationTitle("AirPulse • PC Audio")
             .navigationBarTitleDisplayMode(.inline)
             .preferredColorScheme(.dark)
         }

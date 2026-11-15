@@ -15,7 +15,9 @@ targets:
     info:
       path: PCAudioReceiver/Info.plist
       properties:
-        CFBundleDisplayName: PC Audio Bridge
+        CFBundleDisplayName: AirPulse
+        CFBundleName: AirPulse
+        CFBundleIconName: AppIcon
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
         LSRequiresIPhoneOS: true
@@ -33,6 +35,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.antigravity.pcaudiostreamer.receiver
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGNING_ALLOWED: NO
