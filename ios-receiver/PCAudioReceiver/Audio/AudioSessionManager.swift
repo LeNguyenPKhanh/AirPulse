@@ -1,13 +1,17 @@
 import Foundation
 import AVFoundation
+import MediaPlayer
+import UIKit
 
-/// Configures iOS `AVAudioSession` for non-interruptive background playback (.playback + .mixWithOthers)
-/// so incoming Windows 11 audio mixes seamlessly alongside native iOS apps (YouTube, TikTok, games)
-/// and continues playing when the iPhone screen is locked.
+/// Configures iOS `AVAudioSession`, `MPNowPlayingInfoCenter`, and `MPRemoteCommandCenter`
+/// so AirPulse appears in the iOS Lock Screen, Notification Center, Control Center,
+/// and Dynamic Island (Now Playing Live Activity) just like Spotify / Apple Music.
 final class AudioSessionManager: ObservableObject {
     static let shared = AudioSessionManager()
 
-    @Published var mixWithOthers: Bool = true {
+    /// Default false so iOS enables Lock Screen / Notification Center / Dynamic Island Now Playing controls.
+    /// Can be toggled on in-app if the user wants to mix with other iPhone apps simultaneously.
+    @Published var mixWithOthers: Bool = false {
         didSet { reconfigureSession() }
     }
 
@@ -15,13 +19,21 @@ final class AudioSessionManager: ObservableObject {
         didSet { reconfigureSession() }
     }
 
-    @Published private(set) var currentRouteDescription: String = "System Output"
+    @Published private(set) var currentRouteDescription: String = "iPhone Speaker"
 
     var onInterruptionEnded: (() -> Void)?
+    var onRemotePlayRequested: (() -> Void)?
+    var onRemotePauseRequested: (() -> Void)?
+    var onRemoteToggleRequested: (() -> Void)?
+
+    private var cachedArtwork: MPMediaItemArtwork?
+    private var remoteCommandsConfigured = false
 
     private init() {
         setupNotifications()
         reconfigureSession()
+        setupRemoteTransportControls()
+        updateNowPlayingInfo(isStreaming: false, pcName: "Windows 11 PC", codec: "PCM 48kHz")
     }
 
     func reconfigureSession() {
@@ -42,13 +54,165 @@ final class AudioSessionManager: ObservableObject {
                 options: options
             )
             try session.setPreferredSampleRate(48000.0)
-            try session.setPreferredIOBufferDuration(0.005) // ~5ms ultra-low latency hardware buffer
+            try session.setPreferredIOBufferDuration(0.005)
             try session.setActive(true, options: [])
             updateRouteDescription()
         } catch {
             print("[AudioSessionManager] Failed to configure AVAudioSession: \(error.localizedDescription)")
         }
     }
+
+    // MARK: - Lock Screen, Notification Center & Dynamic Island Now Playing
+
+    private func setupRemoteTransportControls() {
+        guard !remoteCommandsConfigured else { return }
+        remoteCommandsConfigured = true
+
+        DispatchQueue.main.async {
+            UIApplication.shared.beginReceivingRemoteControlEvents()
+        }
+
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.playCommand.addTarget { [weak self] _ in
+            self?.onRemotePlayRequested?()
+            return .success
+        }
+
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
+            self?.onRemotePauseRequested?()
+            return .success
+        }
+
+        commandCenter.stopCommand.isEnabled = true
+        commandCenter.stopCommand.addTarget { [weak self] _ in
+            self?.onRemotePauseRequested?()
+            return .success
+        }
+
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            self?.onRemoteToggleRequested?()
+            return .success
+        }
+
+        // Disable seek/skip tracks so iOS displays the clean LIVE stream layout on Lock Screen & Dynamic Island
+        commandCenter.nextTrackCommand.isEnabled = false
+        commandCenter.previousTrackCommand.isEnabled = false
+        commandCenter.changePlaybackPositionCommand.isEnabled = false
+    }
+
+    func updateNowPlayingInfo(isStreaming: Bool, pcName: String, codec: String) {
+        DispatchQueue.main.async {
+            var info: [String: Any] = [
+                MPMediaItemPropertyTitle: isStreaming ? "AirPulse • \(pcName)" : "AirPulse • Standby",
+                MPMediaItemPropertyArtist: isStreaming
+                    ? "Windows 11 Live Stream (\(codec))"
+                    : "Tap Play to Stream PC Audio",
+                MPMediaItemPropertyAlbumTitle: "AirPulse Liquid Glass Audio Bridge",
+                MPNowPlayingInfoPropertyIsLiveStream: true,
+                MPNowPlayingInfoPropertyPlaybackRate: isStreaming ? 1.0 : 0.0,
+                MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
+                MPNowPlayingInfoPropertyElapsedPlaybackTime: 0.0
+            ]
+
+            if let artwork = self.getOrCreateArtwork() {
+                info[MPMediaItemPropertyArtwork] = artwork
+            }
+
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+            if #available(iOS 13.0, *) {
+                MPNowPlayingInfoCenter.default().playbackState = isStreaming ? .playing : .paused
+            }
+        }
+    }
+
+    private func getOrCreateArtwork() -> MPMediaItemArtwork? {
+        if let existing = cachedArtwork {
+            return existing
+        }
+
+        let size = CGSize(width: 600, height: 600)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            let cg = ctx.cgContext
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+            // 1. Rich Midnight Silk Background
+            let bgColors = [
+                UIColor(red: 0.06, green: 0.08, blue: 0.14, alpha: 1.0).cgColor,
+                UIColor(red: 0.11, green: 0.10, blue: 0.22, alpha: 1.0).cgColor,
+                UIColor(red: 0.05, green: 0.07, blue: 0.12, alpha: 1.0).cgColor
+            ] as CFArray
+            if let grad = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: [0.0, 0.5, 1.0]) {
+                cg.drawLinearGradient(grad, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+            }
+
+            // 2. Soft Warm Coral & Sky Orbs (Apple Music / Dynamic Island aesthetic)
+            let coralColors = [
+                UIColor(red: 1.0, green: 0.52, blue: 0.38, alpha: 0.65).cgColor,
+                UIColor(red: 1.0, green: 0.52, blue: 0.38, alpha: 0.0).cgColor
+            ] as CFArray
+            if let coralGrad = CGGradient(colorsSpace: colorSpace, colors: coralColors, locations: [0.0, 1.0]) {
+                cg.drawRadialGradient(
+                    coralGrad,
+                    startCenter: CGPoint(x: 160, y: 150),
+                    startRadius: 10,
+                    endCenter: CGPoint(x: 160, y: 150),
+                    endRadius: 320,
+                    options: []
+                )
+            }
+
+            let skyColors = [
+                UIColor(red: 0.38, green: 0.78, blue: 1.0, alpha: 0.60).cgColor,
+                UIColor(red: 0.38, green: 0.78, blue: 1.0, alpha: 0.0).cgColor
+            ] as CFArray
+            if let skyGrad = CGGradient(colorsSpace: colorSpace, colors: skyColors, locations: [0.0, 1.0]) {
+                cg.drawRadialGradient(
+                    skyGrad,
+                    startCenter: CGPoint(x: 450, y: 440),
+                    startRadius: 10,
+                    endCenter: CGPoint(x: 450, y: 440),
+                    endRadius: 340,
+                    options: []
+                )
+            }
+
+            // 3. Center Glass Squircle
+            let cardRect = CGRect(x: 130, y: 130, width: 340, height: 340)
+            let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 84)
+            UIColor(white: 1.0, alpha: 0.12).setFill()
+            cardPath.fill()
+            UIColor(white: 1.0, alpha: 0.35).setStroke()
+            cardPath.lineWidth = 4
+            cardPath.stroke()
+
+            // 4. Stylized Acoustic Waveform Bars
+            let barHeights: [CGFloat] = [70, 130, 200, 150, 220, 120, 75]
+            let barWidth: CGFloat = 20
+            let spacing: CGFloat = 16
+            let totalWidth = CGFloat(barHeights.count) * barWidth + CGFloat(barHeights.count - 1) * spacing
+            var startX = (size.width - totalWidth) / 2.0
+
+            UIColor(red: 0.96, green: 0.96, blue: 0.98, alpha: 0.95).setFill()
+            for h in barHeights {
+                let y = (size.height - h) / 2.0
+                let barRect = CGRect(x: startX, y: y, width: barWidth, height: h)
+                let barPath = UIBezierPath(roundedRect: barRect, cornerRadius: barWidth / 2.0)
+                barPath.fill()
+                startX += barWidth + spacing
+            }
+        }
+
+        let artwork = MPMediaItemArtwork(boundsSize: size) { _ in image }
+        cachedArtwork = artwork
+        return artwork
+    }
+
+    // MARK: - Notifications
 
     private func setupNotifications() {
         NotificationCenter.default.addObserver(
@@ -88,7 +252,7 @@ final class AudioSessionManager: ObservableObject {
         let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
         if let first = outputs.first {
             DispatchQueue.main.async {
-                self.currentRouteDescription = "\(first.portName) (\(first.portType.rawValue))"
+                self.currentRouteDescription = first.portName
             }
         }
     }

@@ -33,6 +33,7 @@ targets:
         UIBackgroundModes:
           - audio
           - bluetooth-central
+        NSSupportsLiveActivities: true
         NSBluetoothAlwaysUsageDescription: "Used to automatically discover and pair with your Windows 11 PC Audio Streamer over Bluetooth Low Energy."
         NSBluetoothPeripheralUsageDescription: "Used to automatically discover and pair with your Windows 11 PC Audio Streamer."
         NSLocalNetworkUsageDescription: "Used to receive real-time low-latency UDP audio streams from your Windows 11 PC over local Wi-Fi or USB."
