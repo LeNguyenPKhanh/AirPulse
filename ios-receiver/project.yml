@@ -1,0 +1,41 @@
+name: PCAudioReceiver
+options:
+  bundleIdPrefix: com.antigravity.pcaudiostreamer
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+
+targets:
+  PCAudioReceiver:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: PCAudioReceiver
+    info:
+      path: PCAudioReceiver/Info.plist
+      properties:
+        CFBundleDisplayName: PC Audio Bridge
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        LSRequiresIPhoneOS: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIBackgroundModes:
+          - audio
+          - bluetooth-central
+        NSBluetoothAlwaysUsageDescription: "Used to automatically discover and pair with your Windows 11 PC Audio Streamer over Bluetooth Low Energy."
+        NSBluetoothPeripheralUsageDescription: "Used to automatically discover and pair with your Windows 11 PC Audio Streamer."
+        NSLocalNetworkUsageDescription: "Used to receive real-time low-latency UDP audio streams from your Windows 11 PC over local Wi-Fi or USB."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antigravity.pcaudiostreamer.receiver
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        ENABLE_BITCODE: NO

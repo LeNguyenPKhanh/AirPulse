@@ -1,0 +1,11 @@
+# .NET / Windows build outputs
+windows-sender/bin/
+windows-sender/obj/
+windows-sender/publish/
+
+# Xcode / macOS build outputs
+ios-receiver/build/
+ios-receiver/Payload/
+ios-receiver/*.xcodeproj/
+ios-receiver/*.ipa
+.DS_Store
