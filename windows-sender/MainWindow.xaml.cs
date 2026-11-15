@@ -48,6 +48,9 @@ public partial class MainWindow : Window
         RefreshPlaybackDevices();
         int port = ParsePort();
         await _bleDiscovery.StartAsync(port);
+
+        // Auto-start WASAPI capture & UDP handshake listener on launch so iPhone can connect immediately
+        StartStreamingInternal();
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
@@ -61,10 +64,18 @@ public partial class MainWindow : Window
     {
         var devices = WasapiAudioStreamer.GetPlaybackDevices();
         DeviceComboBox.ItemsSource = devices;
-        var defaultDevice = devices.FirstOrDefault(d => d.IsDefault) ?? devices.FirstOrDefault();
-        if (defaultDevice != null)
+        if (devices.Count > 0)
         {
-            DeviceComboBox.SelectedItem = defaultDevice;
+            // Default to "Auto (Follow Windows Default Speaker)" so switching speakers in Windows works automatically!
+            DeviceComboBox.SelectedIndex = 0;
+        }
+    }
+
+    private void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DeviceComboBox.SelectedItem is AudioDeviceItem selected && _audioStreamer.IsStreaming)
+        {
+            _audioStreamer.SwitchCaptureDevice(selected.Id);
         }
     }
 
@@ -85,7 +96,18 @@ public partial class MainWindow : Window
 
     private void CodecComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _audioStreamer.UseOpusCodec = CodecComboBox.SelectedIndex == 0;
+        if (_audioStreamer != null && CodecComboBox != null)
+        {
+            _audioStreamer.UseOpusCodec = CodecComboBox.SelectedIndex == 1;
+        }
+    }
+
+    private void MutePcCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_audioStreamer != null && MutePcCheckBox != null)
+        {
+            _audioStreamer.MutePcSpeaker = MutePcCheckBox.IsChecked == true;
+        }
     }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -112,14 +134,23 @@ public partial class MainWindow : Window
             return;
         }
 
+        StartStreamingInternal();
+    }
+
+    private void StartStreamingInternal()
+    {
+        if (_audioStreamer.IsStreaming)
+            return;
+
         try
         {
             var selectedDevice = DeviceComboBox.SelectedItem as AudioDeviceItem;
             int port = ParsePort();
 
-            _audioStreamer.UseOpusCodec = CodecComboBox.SelectedIndex == 0;
-            _audioStreamer.FrameDurationMs = FrameSizeComboBox.SelectedIndex == 1 ? 10 : 5;
+            _audioStreamer.UseOpusCodec = CodecComboBox.SelectedIndex == 1;
+            _audioStreamer.FrameDurationMs = FrameSizeComboBox.SelectedIndex == 1 ? 10 : 7;
             _audioStreamer.VolumeGain = (float)(VolumeSlider.Value / 100.0);
+            _audioStreamer.MutePcSpeaker = MutePcCheckBox.IsChecked == true;
 
             _lastBytesSnapshot = 0;
             _lastSnapshotTime = DateTime.UtcNow;
@@ -128,7 +159,6 @@ public partial class MainWindow : Window
 
             StartStopBtn.Content = "STOP STREAMING";
             StartStopBtn.Background = new SolidColorBrush(Color.FromRgb(220, 38, 38));
-            DeviceComboBox.IsEnabled = false;
             FrameSizeComboBox.IsEnabled = false;
         }
         catch (Exception ex)

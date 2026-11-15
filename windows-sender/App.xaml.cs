@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 
@@ -8,6 +9,20 @@ public partial class App : Application
 {
     public App()
     {
+        // Close any previous running instance of PcAudioStreamer so only one window & UDP listener is active
+        try
+        {
+            var current = Process.GetCurrentProcess();
+            foreach (var proc in Process.GetProcessesByName(current.ProcessName))
+            {
+                if (proc.Id != current.Id)
+                {
+                    try { proc.Kill(); } catch { }
+                }
+            }
+        }
+        catch { }
+
         DispatcherUnhandledException += (s, e) =>
         {
             File.WriteAllText("crash.log", e.Exception.ToString());

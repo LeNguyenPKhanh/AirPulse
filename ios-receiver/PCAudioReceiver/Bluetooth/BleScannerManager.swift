@@ -35,6 +35,9 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
     }
 
     func startScanning() {
+        DispatchQueue.main.async {
+            self.discoveredEndpoints.removeAll()
+        }
         if centralManager.state == .poweredOn {
             centralManager.scanForPeripherals(
                 withServices: [Self.serviceUuid],

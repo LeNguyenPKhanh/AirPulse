@@ -188,7 +188,8 @@ final class OpusAndPcmDecoder {
         }
 
         if (status == noErr || status == 100) && ioOutputDataPackets > 0 {
-            let pcmBytes = Data(bytes: decodedInt16, count: Int(ioOutputDataPackets) * 4)
+            let countShorts = Int(ioOutputDataPackets) * 2
+            let pcmBytes = decodedInt16.prefix(countShorts).withUnsafeBufferPointer { Data(buffer: $0) }
             return decodePcm16(payload: pcmBytes, volumeGain: volumeGain)
         }
 

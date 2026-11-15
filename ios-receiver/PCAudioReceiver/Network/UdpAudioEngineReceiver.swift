@@ -15,7 +15,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
     @Published private(set) var estimatedBufferMs: Double = 0.0
 
     @Published var volumeGain: Float = 1.0
-    @Published var targetBufferMs: Double = 15.0 // Configurable 5ms - 50ms jitter ceiling
+    @Published var targetBufferMs: Double = 35.0 // Configurable 5ms - 80ms jitter ceiling
 
     private let audioEngine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
@@ -179,9 +179,9 @@ final class UdpAudioEngineReceiver: ObservableObject {
             let now = CFAbsoluteTimeGetCurrent()
             let silenceElapsed = now - self.lastPacketTimestamp
 
-            // If no UDP packets arrived in the last 30ms, schedule a silent 10ms buffer
+            // If no UDP packets arrived in the last 250ms, schedule a silent 10ms buffer
             // so iOS never suspends the background audio session when the screen is locked.
-            if silenceElapsed > 0.030 {
+            if silenceElapsed > 0.250 {
                 self.scheduleSilentKeepAlive()
             }
 
@@ -261,17 +261,17 @@ final class UdpAudioEngineReceiver: ObservableObject {
             lastSequenceNumber = seq
 
             // Adaptive jitter protection: if queued audio exceeds targetBufferMs, drop oldest buildup
-            let maxAllowedBuffers = max(2, Int(ceil(targetBufferMs / 5.0)))
+            let maxAllowedBuffers = max(5, Int(ceil(targetBufferMs / 8.0)))
             bufferLock.lock()
             let currentQueued = Int(inflightBuffers)
             bufferLock.unlock()
 
-            if currentQueued > maxAllowedBuffers + 2 {
+            if currentQueued > maxAllowedBuffers + 4 {
                 // Skip scheduling this frame to snap latency back down to targetBufferMs
                 continue
             }
 
-            let payloadData = Data(bytes: &packetBuf[12], count: payloadLen)
+            let payloadData = Data(packetBuf[12..<(12 + payloadLen)])
             let isOpus = (codecByte & 0x02) != 0
             let isSilentKeepAlive = (flags & 0x04) != 0
 

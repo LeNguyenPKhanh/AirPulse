@@ -41,7 +41,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <ComboBox x:Name="DeviceComboBox" Grid.Column="0" Height="34" VerticalContentAlignment="Center" Padding="8,0"/>
+                    <ComboBox x:Name="DeviceComboBox" Grid.Column="0" Height="34" VerticalContentAlignment="Center" Padding="8,0" SelectionChanged="DeviceComboBox_SelectionChanged"/>
                     <Button x:Name="RefreshDevicesBtn" Grid.Column="1" Content="Refresh" Width="76" Height="34" Margin="8,0,0,0"
                             Background="#334155" Foreground="White" BorderThickness="0" Click="RefreshDevicesBtn_Click"/>
                 </Grid>
@@ -50,6 +50,16 @@
                 <TextBlock Text="Live Audio Output Level" FontSize="11.5" Foreground="#94A3B8" Margin="0,12,0,4"/>
                 <ProgressBar x:Name="PeakMeterBar" Minimum="0" Maximum="100" Value="0" Height="10"
                              Background="#0F172A" Foreground="#22C55E" BorderThickness="0"/>
+
+                <!-- Mute PC Speaker Checkbox -->
+                <CheckBox x:Name="MutePcCheckBox"
+                          Content="Mute PC Speakers while streaming to iPhone (Auto-Restore on Stop)"
+                          IsChecked="True"
+                          Foreground="#38BDF8"
+                          FontWeight="Medium"
+                          Margin="0,10,0,0"
+                          Checked="MutePcCheckBox_Changed"
+                          Unchecked="MutePcCheckBox_Changed"/>
             </StackPanel>
         </Border>
 
@@ -91,16 +101,16 @@
                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
                         <TextBlock Text="Audio Codec" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                         <ComboBox x:Name="CodecComboBox" Height="32" VerticalContentAlignment="Center" SelectionChanged="CodecComboBox_SelectionChanged">
-                            <ComboBoxItem Content="Opus (192 kbps Ultra-Low Delay)" IsSelected="True"/>
-                            <ComboBoxItem Content="Raw PCM 16-bit (Uncompressed 48kHz)"/>
+                            <ComboBoxItem Content="Raw PCM 16-bit (48kHz Crystal Clear - Recommended)" IsSelected="True"/>
+                            <ComboBoxItem Content="Opus (192 kbps Compressed)"/>
                         </ComboBox>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                        <TextBlock Text="UDP Frame Size" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                        <TextBlock Text="UDP Frame Pacing" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
                         <ComboBox x:Name="FrameSizeComboBox" Height="32" VerticalContentAlignment="Center">
-                            <ComboBoxItem Content="5 ms (240 samples - Recommended)" Tag="5" IsSelected="True"/>
-                            <ComboBoxItem Content="10 ms (480 samples - High Stability)" Tag="10"/>
+                            <ComboBoxItem Content="7.5 ms (Single-MTU Smooth Pacing)" Tag="7" IsSelected="True"/>
+                            <ComboBoxItem Content="10 ms (High Stability)" Tag="10"/>
                         </ComboBox>
                     </StackPanel>
                 </Grid>
