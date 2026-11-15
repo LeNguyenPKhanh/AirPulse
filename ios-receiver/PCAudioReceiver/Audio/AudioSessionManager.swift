@@ -54,7 +54,7 @@ final class AudioSessionManager: ObservableObject {
                 options: options
             )
             try session.setPreferredSampleRate(48000.0)
-            try session.setPreferredIOBufferDuration(0.005)
+            try session.setPreferredIOBufferDuration(0.015) // 15ms hardware DMA cushion prevents glitches when switching iOS apps
             try session.setActive(true, options: [])
             updateRouteDescription()
         } catch {

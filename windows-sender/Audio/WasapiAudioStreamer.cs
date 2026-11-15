@@ -118,6 +118,7 @@ public sealed class WasapiAudioStreamer : IDisposable
     private long _totalBytesSent;
 
     private readonly short[] _accumBuffer = new short[InterleavedShortsPerPacket * 16];
+    private readonly byte[] _reusablePcmPacketBuf = new byte[AudioPacketProtocol.HeaderSize + (InterleavedShortsPerPacket * sizeof(short))];
     private int _accumCount;
     private bool _needsPrebufferCushion = true;
     private int _consecutiveSendErrors;
@@ -337,6 +338,8 @@ public sealed class WasapiAudioStreamer : IDisposable
         if (client == null)
             return;
 
+        try { Thread.CurrentThread.Priority = ThreadPriority.Highest; } catch { }
+
         var captureClient = client.AudioCaptureClient;
         short[] cushionBuf = new short[InterleavedShortsPerPacket];
         short[] silentBuf = new short[InterleavedShortsPerPacket];
@@ -344,7 +347,7 @@ public sealed class WasapiAudioStreamer : IDisposable
 
         while (!token.IsCancellationRequested && IsStreaming)
         {
-            Thread.Sleep(5);
+            Thread.Sleep(2);
 
             try
             {
@@ -638,7 +641,7 @@ public sealed class WasapiAudioStreamer : IDisposable
         else
         {
             payloadLength = interleavedPcm.Length * sizeof(short);
-            packetBuffer = new byte[AudioPacketProtocol.HeaderSize + payloadLength];
+            packetBuffer = _reusablePcmPacketBuf;
             MemoryMarshal.AsBytes(interleavedPcm).CopyTo(packetBuffer.AsSpan(AudioPacketProtocol.HeaderSize, payloadLength));
             codecByte = AudioCodecByte.RawPcm16 | AudioCodecByte.StereoFlag;
         }

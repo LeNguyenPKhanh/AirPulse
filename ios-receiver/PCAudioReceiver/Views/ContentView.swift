@@ -181,19 +181,43 @@ struct LiquidGLWebView: UIViewRepresentable {
         weak var webView: WKWebView?
         private var isWebReady = false
         private var isEvaluatingJs = false
+        private var isAppInForeground = true
         private var lastToggleActionTime: TimeInterval = 0
         private var stateTimer: Timer?
 
         init(parent: LiquidGLWebView) {
             self.parent = parent
             super.init()
-            self.stateTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
+            self.stateTimer = Timer.scheduledTimer(withTimeInterval: 0.10, repeats: true) { [weak self] _ in
                 self?.pushStateToWeb()
             }
+
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(appWillResignActive),
+                name: UIApplication.willResignActiveNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(appDidBecomeActive),
+                name: UIApplication.didBecomeActiveNotification,
+                object: nil
+            )
         }
 
         deinit {
             stateTimer?.invalidate()
+            NotificationCenter.default.removeObserver(self)
+        }
+
+        @objc private func appWillResignActive() {
+            isAppInForeground = false
+        }
+
+        @objc private func appDidBecomeActive() {
+            isAppInForeground = true
+            pushStateToWeb()
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -277,7 +301,7 @@ struct LiquidGLWebView: UIViewRepresentable {
         }
 
         func pushStateToWeb() {
-            guard isWebReady, !isEvaluatingJs, let webView = webView else { return }
+            guard isWebReady, isAppInForeground, !isEvaluatingJs, let webView = webView else { return }
 
             let endpointsArray: [[String: Any]] = parent.bleScanner.discoveredEndpoints.map { ep in
                 [
