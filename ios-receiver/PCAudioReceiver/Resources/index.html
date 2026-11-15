@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>AirPulse — Liquid Glass</title>
+    <style>
+      :root {
+        --text-primary: #f5f5f7;
+        --text-secondary: rgba(245, 245, 247, 0.62);
+        --text-tertiary: rgba(245, 245, 247, 0.4);
+        --accent-mint: #30d158;
+        --accent-coral: #ff453a;
+        --accent-warm: #ff9f0a;
+        --spring-out: cubic-bezier(0.22, 1, 0.36, 1);
+        --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        background-color: #0e1017;
+        color: var(--text-primary);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* Full-document organic Apple silk wallpaper canvas for liquidGL refraction */
+      #apple-wallpaper {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+        display: block;
+      }
+
+      /* Main scrollable stage */
+      .app-stage {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 430px;
+        margin: 0 auto;
+        padding: calc(env(safe-area-inset-top, 44px) + 14px) 18px
+          calc(env(safe-area-inset-bottom, 24px) + 28px) 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* Top Apple minimalist title bar */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 6px 6px 6px;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: appleReveal 0.65s var(--spring-out) 0.04s forwards;
+      }
+
+      .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-orb {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent-mint);
+        box-shadow: 0 0 12px rgba(48, 209, 88, 0.85);
+        transition:
+          background 0.4s var(--spring-out),
+          box-shadow 0.4s var(--spring-out),
+          transform 0.4s var(--spring-bounce);
+      }
+
+      .brand-orb.idle {
+        background: #64d2ff;
+        box-shadow: 0 0 10px rgba(100, 210, 255, 0.65);
+      }
+
+      .brand-title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: var(--text-primary);
+      }
+
+      .codec-pill {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: rgba(245, 245, 247, 0.88);
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 0.5px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      /* Base liquidGL glass card container */
+      .glass-card {
+        position: relative;
+        width: 100%;
+        border-radius: 30px;
+        background: rgba(24, 26, 36, 0.22);
+        border: 0.5px solid rgba(255, 255, 255, 0.18);
+        overflow: hidden;
+        pointer-events: auto !important;
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+        animation: appleCardReveal 0.75s var(--spring-out) forwards;
+      }
+
+      .glass-card:nth-of-type(1) {
+        animation-delay: 0.08s;
+      }
+      .glass-card:nth-of-type(2) {
+        animation-delay: 0.14s;
+      }
+      .glass-card:nth-of-type(3) {
+        animation-delay: 0.2s;
+      }
+      .glass-card:nth-of-type(4) {
+        animation-delay: 0.26s;
+      }
+
+      .card-inner {
+        position: relative;
+        z-index: 3;
+        padding: 22px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      @keyframes appleReveal {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes appleCardReveal {
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* Eyebrow & Section Headers */
+      .row-between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .eyebrow {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+      }
+
+      /* Hero Audio Status & Waveform */
+      .hero-status {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .hero-headline {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        color: var(--text-primary);
+        transition: all 0.35s var(--spring-out);
+      }
+
+      .hero-subline {
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--text-secondary);
+        letter-spacing: -0.01em;
+      }
+
+      .waveform-wrap {
+        position: relative;
+        width: 100%;
+        height: 38px;
+        display: flex;
+        align-items: center;
+      }
+
+      .waveform-svg {
+        width: 100%;
+        height: 36px;
+        overflow: visible;
+      }
+
+      .waveform-svg path {
+        fill: none;
+        stroke: rgba(245, 245, 247, 0.85);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.22));
+        transition: stroke 0.35s ease;
+      }
+
+      .hairline {
+        width: 100%;
+        height: 0.5px;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      /* Telemetry Trio inside Hero Card */
+      .stat-trio {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .stat-item + .stat-item {
+        border-left: 0.5px solid rgba(255, 255, 255, 0.14);
+        padding-left: 12px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+      }
+
+      .stat-value {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-primary);
+      }
+
+      .stat-value small {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-left: 2px;
+      }
+
+      /* Stacked Control Lenses (Buttons, Pills, Endpoint Cards) */
+      .apple-btn {
+        appearance: none;
+        border: 0.5px solid rgba(255, 255, 255, 0.24);
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        border-radius: 999px;
+        padding: 7px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition:
+          transform 0.28s var(--spring-bounce),
+          background 0.25s var(--spring-out),
+          opacity 0.25s ease;
+      }
+
+      .apple-btn:active {
+        transform: scale(0.92);
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      /* Primary Stream Action Button */
+      .primary-stream-btn {
+        width: 100%;
+        height: 52px;
+        border-radius: 20px;
+        border: 0.5px solid rgba(255, 255, 255, 0.28);
+        background: rgba(245, 245, 247, 0.92);
+        color: #0e1017;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+        transition:
+          transform 0.32s var(--spring-bounce),
+          background 0.35s var(--spring-out),
+          color 0.35s var(--spring-out),
+          box-shadow 0.35s var(--spring-out);
+      }
+
+      .primary-stream-btn:active {
+        transform: scale(0.95);
+      }
+
+      .primary-stream-btn.streaming {
+        background: rgba(255, 69, 58, 0.88);
+        color: #ffffff;
+        box-shadow: 0 8px 26px rgba(255, 69, 58, 0.28);
+      }
+
+      .primary-stream-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+
+      /* Discovered PC List */
+      .endpoints-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .endpoint-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 0.5px solid rgba(255, 255, 255, 0.16);
+        transition:
+          transform 0.3s var(--spring-bounce),
+          background 0.25s var(--spring-out);
+      }
+
+      .endpoint-item:active {
+        transform: scale(0.97);
+        background: rgba(255, 255, 255, 0.13);
+      }
+
+      .endpoint-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .endpoint-name {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        color: var(--text-primary);
+      }
+
+      .endpoint-sub {
+        font-size: 12px;
+        color: var(--text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .connect-pill {
+        padding: 7px 15px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        border: none;
+        background: rgba(245, 245, 247, 0.92);
+        color: #11131a;
+        cursor: pointer;
+        transition:
+          transform 0.28s var(--spring-bounce),
+          background 0.3s var(--spring-out),
+          color 0.3s var(--spring-out);
+      }
+
+      .connect-pill.active {
+        background: rgba(48, 209, 88, 0.24);
+        color: #5ef283;
+        border: 0.5px solid rgba(48, 209, 88, 0.45);
+      }
+
+      /* Manual IPv4 + Port Row */
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr 92px;
+        gap: 10px;
+      }
+
+      .apple-input {
+        width: 100%;
+        height: 42px;
+        padding: 0 14px;
+        border-radius: 14px;
+        border: 0.5px solid rgba(255, 255, 255, 0.16);
+        background: rgba(0, 0, 0, 0.22);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        font-variant-numeric: tabular-nums;
+        outline: none;
+        transition:
+          border-color 0.25s ease,
+          background 0.25s ease;
+        user-select: text;
+        -webkit-user-select: text;
+      }
+
+      .apple-input:focus {
+        border-color: rgba(255, 255, 255, 0.48);
+        background: rgba(0, 0, 0, 0.34);
+      }
+
+      /* Elastic Apple Music / iOS 26 Sliders */
+      .slider-group {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .slider-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+
+      .slider-title {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .slider-readout {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .elastic-slider {
+        position: relative;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        touch-action: none;
+      }
+
+      .elastic-track {
+        position: relative;
+        width: 100%;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        overflow: hidden;
+        transition:
+          height 0.32s var(--spring-bounce),
+          background 0.25s ease;
+      }
+
+      .elastic-slider.dragging .elastic-track {
+        height: 13px;
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      .elastic-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        border-radius: 999px;
+        background: rgba(245, 245, 247, 0.92);
+        transition: background 0.25s ease;
+      }
+
+      .elastic-slider.dragging .elastic-fill {
+        background: #ffffff;
+      }
+
+      .elastic-knob {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+        transform: translate(-50%, -50%) scale(1);
+        transition: transform 0.32s var(--spring-bounce);
+        pointer-events: none;
+      }
+
+      .elastic-slider.dragging .elastic-knob {
+        transform: translate(-50%, -50%) scale(1.26);
+      }
+
+      /* iOS Spring Toggle Switches */
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 4px 0;
+      }
+
+      .toggle-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .toggle-title {
+        font-size: 14.5px;
+        font-weight: 500;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+      }
+
+      .toggle-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.3;
+      }
+
+      .ios-switch {
+        position: relative;
+        width: 50px;
+        height: 30px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 0.5px solid rgba(255, 255, 255, 0.14);
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: background 0.32s var(--spring-out);
+      }
+
+      .ios-switch.on {
+        background: rgba(48, 209, 88, 0.88);
+      }
+
+      .ios-switch-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        transition: transform 0.34s var(--spring-bounce);
+      }
+
+      .ios-switch.on .ios-switch-thumb {
+        transform: translateX(20px);
+      }
+
+      .ios-switch:active .ios-switch-thumb {
+        width: 29px;
+      }
+
+      .ios-switch.on:active .ios-switch-thumb {
+        transform: translateX(16px);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- High-resolution Apple silk mesh wallpaper refracted by liquidGL -->
+    <canvas id="apple-wallpaper"></canvas>
+
+    <main class="app-stage">
+      <!-- Top Header -->
+      <header class="top-bar">
+        <div class="brand-group">
+          <span class="brand-orb idle" id="status-orb"></span>
+          <h1 class="brand-title">AirPulse</h1>
+        </div>
+        <span class="codec-pill" id="codec-badge">PCM 48kHz</span>
+      </header>
+
+      <!-- Card 1: Live Audio Session & Waveform Lens -->
+      <section class="glass-card" id="hero-lens">
+        <div class="card-inner">
+          <div class="row-between">
+            <span class="eyebrow">Live Audio Bridge</span>
+            <span class="eyebrow" id="route-label">iPhone Speaker</span>
+          </div>
+
+          <div class="hero-status">
+            <div class="hero-headline" id="connection-headline">
+              Ready to Connect
+            </div>
+            <div class="hero-subline" id="bt-status-subline">
+              Scanning for Windows 11 PC via BLE &amp; Wi-Fi...
+            </div>
+          </div>
+
+          <div class="waveform-wrap">
+            <svg
+              class="waveform-svg"
+              viewBox="0 0 320 36"
+              preserveAspectRatio="none"
+            >
+              <path id="waveform-path" d="M0,18 L320,18"></path>
+            </svg>
+          </div>
+
+          <div class="hairline"></div>
+
+          <div class="stat-trio">
+            <div class="stat-item">
+              <span class="stat-label">Latency</span>
+              <span class="stat-value" id="stat-latency"
+                >0.0<small>ms</small></span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Packets</span>
+              <span class="stat-value" id="stat-packets">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Dropped</span>
+              <span class="stat-value" id="stat-dropped">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 2: PC Auto-Discovery & Connection Lens -->
+      <section class="glass-card">
+        <div class="card-inner">
+          <div class="row-between">
+            <span class="eyebrow">Windows 11 PC Discovery</span>
+            <button class="apple-btn" id="btn-rescan" type="button">
+              Rescan
+            </button>
+          </div>
+
+          <div class="endpoints-list" id="endpoints-container">
+            <div class="endpoint-item">
+              <div class="endpoint-meta">
+                <span class="endpoint-name">Searching local network...</span>
+                <span class="endpoint-sub"
+                  >Ensure AirPulse is running on your PC</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="hairline"></div>
+
+          <div class="input-row">
+            <input
+              class="apple-input"
+              id="input-ip"
+              type="text"
+              inputmode="decimal"
+              placeholder="PC IPv4 (192.168.x.x)"
+              value="192.168.102.5"
+            />
+            <input
+              class="apple-input"
+              id="input-port"
+              type="text"
+              inputmode="numeric"
+              placeholder="Port"
+              value="49152"
+            />
+          </div>
+
+          <button
+            class="primary-stream-btn"
+            id="btn-toggle-stream"
+            type="button"
+          >
+            <svg id="icon-stream" viewBox="0 0 24 24">
+              <path
+                d="M7.5 5.2c0-1.3 1.4-2 2.5-1.4l9.3 5.4a1.7 1.7 0 0 1 0 2.9l-9.3 5.4c-1.1.6-2.5-.1-2.5-1.4z"
+              />
+            </svg>
+            <span id="label-stream">Start Audio Stream</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Card 3: Volume & Latency Elastic Controls Lens -->
+      <section class="glass-card">
+        <div class="card-inner">
+          <span class="eyebrow">Acoustic &amp; Buffer Tuning</span>
+
+          <!-- Volume Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-title">PC Stream Volume</span>
+              <span class="slider-readout" id="vol-readout">100%</span>
+            </div>
+            <div class="elastic-slider" id="slider-volume">
+              <div class="elastic-track">
+                <div
+                  class="elastic-fill"
+                  id="fill-volume"
+                  style="width: 50%"
+                ></div>
+              </div>
+              <div
+                class="elastic-knob"
+                id="knob-volume"
+                style="left: 50%"
+                data-liquid-ignore
+              ></div>
+            </div>
+          </div>
+
+          <!-- Buffer Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-title">Jitter Buffer Ceiling</span>
+              <span class="slider-readout" id="buf-readout">25 ms</span>
+            </div>
+            <div class="elastic-slider" id="slider-buffer">
+              <div class="elastic-track">
+                <div
+                  class="elastic-fill"
+                  id="fill-buffer"
+                  style="width: 21.4%"
+                ></div>
+              </div>
+              <div
+                class="elastic-knob"
+                id="knob-buffer"
+                style="left: 21.4%"
+                data-liquid-ignore
+              ></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 4: iOS Audio Session Mixing Lens -->
+      <section class="glass-card">
+        <div class="card-inner">
+          <span class="eyebrow">iOS Audio Session</span>
+
+          <div class="toggle-row" id="toggle-mix">
+            <div class="toggle-copy">
+              <span class="toggle-title">Mix With iPhone Apps</span>
+              <span class="toggle-desc"
+                >Play simultaneously with YouTube, TikTok, Games &amp; Lock
+                Screen</span
+              >
+            </div>
+            <div class="ios-switch on" id="switch-mix">
+              <div class="ios-switch-thumb"></div>
+            </div>
+          </div>
+
+          <div class="hairline"></div>
+
+          <div class="toggle-row" id="toggle-duck">
+            <div class="toggle-copy">
+              <span class="toggle-title">Duck Other Audio</span>
+              <span class="toggle-desc"
+                >Gently lower other iPhone app volume while PC audio plays</span
+              >
+            </div>
+            <div class="ios-switch" id="switch-duck">
+              <div class="ios-switch-thumb"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Official naughtyduk/liquidGL Library -->
+    <script src="liquidGL.js"></script>
+    <script>
+      /* 1. Paint Soft Apple iOS 26 / Apple Music Silk Wallpaper onto #apple-wallpaper
+            BEFORE initializing liquidGL so NaughtyDOM.rasteriseAsync snapshots the rich
+            organic curves for real-time lens bevel refraction. */
+      function paintAppleSilkWallpaper() {
+        const canvas = document.getElementById("apple-wallpaper");
+        const dpr = Math.min(window.devicePixelRatio || 2, 2);
+        const w = window.innerWidth || 390;
+        const h = Math.max(window.innerHeight || 844, 900);
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+
+        const ctx = canvas.getContext("2d");
+        ctx.scale(dpr, dpr);
+
+        // Deep warm midnight base gradient
+        const baseGrad = ctx.createLinearGradient(0, 0, w, h);
+        baseGrad.addColorStop(0, "#0f131d");
+        baseGrad.addColorStop(0.45, "#171829");
+        baseGrad.addColorStop(1, "#0d1018");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Soft organic Apple mesh orbs
+        const orbs = [
+          {
+            x: w * 0.18,
+            y: h * 0.16,
+            r: w * 0.72,
+            c0: "rgba(255, 136, 102, 0.44)",
+            c1: "rgba(255, 136, 102, 0)",
+          },
+          {
+            x: w * 0.85,
+            y: h * 0.34,
+            r: w * 0.78,
+            c0: "rgba(120, 198, 255, 0.38)",
+            c1: "rgba(120, 198, 255, 0)",
+          },
+          {
+            x: w * 0.25,
+            y: h * 0.62,
+            r: w * 0.8,
+            c0: "rgba(196, 130, 240, 0.34)",
+            c1: "rgba(196, 130, 240, 0)",
+          },
+          {
+            x: w * 0.78,
+            y: h * 0.84,
+            r: w * 0.7,
+            c0: "rgba(88, 214, 185, 0.32)",
+            c1: "rgba(88, 214, 185, 0)",
+          },
+        ];
+
+        orbs.forEach((o) => {
+          const g = ctx.createRadialGradient(o.x, o.y, 8, o.x, o.y, o.r);
+          g.addColorStop(0, o.c0);
+          g.addColorStop(1, o.c1);
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, h);
+        });
+
+        // Subtle flowing silk light ribbons so liquidGL bevel refraction bends visible contours
+        ctx.save();
+        for (let i = 0; i < 5; i++) {
+          const yBase = h * (0.15 + i * 0.18);
+          ctx.beginPath();
+          ctx.moveTo(-40, yBase);
+          ctx.bezierCurveTo(
+            w * 0.32,
+            yBase - 90 + i * 25,
+            w * 0.68,
+            yBase + 95 - i * 20,
+            w + 40,
+            yBase - 30,
+          );
+          const strokeGrad = ctx.createLinearGradient(0, yBase - 60, w, yBase + 60);
+          strokeGrad.addColorStop(0, "rgba(255, 255, 255, 0.02)");
+          strokeGrad.addColorStop(0.5, "rgba(255, 240, 225, 0.13)");
+          strokeGrad.addColorStop(1, "rgba(160, 220, 255, 0.03)");
+          ctx.strokeStyle = strokeGrad;
+          ctx.lineWidth = 28 - i * 3;
+          ctx.lineCap = "round";
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      /* 2. Bridge Helper to Swift WKScriptMessageHandler */
+      function postToNative(payload) {
+        try {
+          if (
+            window.webkit &&
+            window.webkit.messageHandlers &&
+            window.webkit.messageHandlers.airpulse
+          ) {
+            window.webkit.messageHandlers.airpulse.postMessage(payload);
+          }
+        } catch (err) {
+          console.error("Native bridge error:", err);
+        }
+      }
+
+      /* 3. Initialize liquidGL Lenses */
+      let glassInstance = null;
+      const BASE_REFRACTION = 0.014;
+      const BASE_BEVEL_WIDTH = 0.125;
+
+      function initLiquidGL() {
+        if (typeof window.liquidGL !== "function") return;
+        try {
+          glassInstance = window.liquidGL({
+            target: ".glass-card",
+            snapshot: "body",
+            content: false,
+            zIndex: 10,
+            resolution: 2.0,
+            refraction: BASE_REFRACTION,
+            aberration: 0.32,
+            bevelDepth: 0.095,
+            bevelWidth: BASE_BEVEL_WIDTH,
+            frost: 3.6,
+            shadow: true,
+            specular: true,
+            reveal: "none",
+            tilt: false,
+            draggable: false,
+            interaction: "fluid",
+            interactionStrength: 0.55,
+            interactionRadius: 0.55,
+            interactionViscosity: 0.58,
+            magnify: 1.06,
+            tint: "rgba(18, 20, 30, 0.38)",
+            helper: false,
+          });
+        } catch (e) {
+          console.warn("liquidGL init fallback:", e);
+        }
+      }
+
+      /* 4. Smooth Audio-Reactive Waveform & Liquid Glass Pulse */
+      const SAMPLE_COUNT = 42;
+      const waveSamples = new Array(SAMPLE_COUNT).fill(0);
+      let wavePhase = 0;
+      let currentAudioPeak = 0;
+      let smoothedPeak = 0;
+      let isStreamRunning = false;
+
+      function tickWaveformAndRefraction() {
+        const pathEl = document.getElementById("waveform-path");
+        if (pathEl) {
+          smoothedPeak =
+            currentAudioPeak > smoothedPeak
+              ? currentAudioPeak * 0.65 + smoothedPeak * 0.35
+              : smoothedPeak * 0.88;
+
+          wavePhase += isStreamRunning ? 0.22 : 0.06;
+          waveSamples.shift();
+
+          const activeAmp = isStreamRunning
+            ? Math.max(0.06, Math.min(0.95, smoothedPeak * 1.45))
+            : 0.035;
+          const nextVal =
+            Math.sin(wavePhase) * activeAmp * 0.65 +
+            Math.sin(wavePhase * 2.1) * activeAmp * 0.35;
+          waveSamples.push(nextVal);
+
+          const w = 320;
+          const h = 36;
+          const mid = h / 2;
+          const step = w / (SAMPLE_COUNT - 1);
+          let d = "";
+          for (let i = 0; i < SAMPLE_COUNT; i++) {
+            // Taper edges smoothly like Siri / Apple Music waveform
+            const edgeTaper = Math.sin((i / (SAMPLE_COUNT - 1)) * Math.PI);
+            const x = i * step;
+            const y = mid - waveSamples[i] * edgeTaper * (h * 0.44);
+            d += i === 0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : ` L${x.toFixed(1)},${y.toFixed(1)}`;
+          }
+          pathEl.setAttribute("d", d);
+        }
+
+        // Modulate liquidGL refraction & bevel in sync with PC audio beat
+        if (glassInstance) {
+          const lenses = Array.isArray(glassInstance)
+            ? glassInstance
+            : [glassInstance];
+          const pulse = isStreamRunning ? smoothedPeak * 0.85 : 0;
+          lenses.forEach((lens) => {
+            if (lens && lens.options) {
+              lens.options.refraction = BASE_REFRACTION * (1 + pulse);
+              lens.options.bevelWidth = BASE_BEVEL_WIDTH * (1 + pulse * 0.5);
+            }
+          });
+        }
+
+        requestAnimationFrame(tickWaveformAndRefraction);
+      }
+
+      /* 5. Elastic Slider Binding */
+      function bindElasticSlider(sliderId, fillId, knobId, min, max, step, onChange) {
+        const slider = document.getElementById(sliderId);
+        const fill = document.getElementById(fillId);
+        const knob = document.getElementById(knobId);
+        let dragging = false;
+
+        const updateFromClientX = (clientX) => {
+          const rect = slider.getBoundingClientRect();
+          const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+          const rawVal = min + ratio * (max - min);
+          const stepped = Math.round(rawVal / step) * step;
+          const clamped = Math.min(max, Math.max(min, stepped));
+          const pct = ((clamped - min) / (max - min)) * 100;
+          fill.style.width = `${pct}%`;
+          knob.style.left = `${pct}%`;
+          onChange(clamped);
+        };
+
+        slider.addEventListener("pointerdown", (e) => {
+          dragging = true;
+          slider.classList.add("dragging");
+          slider.setPointerCapture(e.pointerId);
+          updateFromClientX(e.clientX);
+        });
+
+        slider.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          updateFromClientX(e.clientX);
+        });
+
+        const endDrag = () => {
+          if (!dragging) return;
+          dragging = false;
+          slider.classList.remove("dragging");
+        };
+        slider.addEventListener("pointerup", endDrag);
+        slider.addEventListener("pointercancel", endDrag);
+
+        return {
+          isDragging: () => dragging,
+          setValue: (val) => {
+            if (dragging) return;
+            const clamped = Math.min(max, Math.max(min, val));
+            const pct = ((clamped - min) / (max - min)) * 100;
+            fill.style.width = `${pct}%`;
+            knob.style.left = `${pct}%`;
+          },
+        };
+      }
+
+      let volumeControl = null;
+      let bufferControl = null;
+      let lastEndpointsKey = "";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        paintAppleSilkWallpaper();
+        initLiquidGL();
+        requestAnimationFrame(tickWaveformAndRefraction);
+
+        window.addEventListener("resize", () => {
+          paintAppleSilkWallpaper();
+        });
+
+        // Rescan button
+        document.getElementById("btn-rescan").addEventListener("click", () => {
+          postToNative({ action: "rescan" });
+        });
+
+        // Start/Stop stream button
+        document
+          .getElementById("btn-toggle-stream")
+          .addEventListener("click", () => {
+            const ip = document.getElementById("input-ip").value.trim();
+            const port =
+              parseInt(document.getElementById("input-port").value.trim(), 10) ||
+              49152;
+            postToNative({ action: "toggleStream", ip, port });
+          });
+
+        // Elastic Volume Slider (0% to 200%)
+        volumeControl = bindElasticSlider(
+          "slider-volume",
+          "fill-volume",
+          "knob-volume",
+          0,
+          200,
+          5,
+          (pct) => {
+            document.getElementById("vol-readout").textContent = `${Math.round(pct)}%`;
+            postToNative({ action: "setVolume", value: pct / 100.0 });
+          },
+        );
+
+        // Elastic Buffer Slider (10ms to 80ms)
+        bufferControl = bindElasticSlider(
+          "slider-buffer",
+          "fill-buffer",
+          "knob-buffer",
+          10,
+          80,
+          5,
+          (ms) => {
+            document.getElementById("buf-readout").textContent = `${Math.round(ms)} ms`;
+            postToNative({ action: "setBufferMs", value: ms });
+          },
+        );
+
+        // iOS Switches
+        document.getElementById("toggle-mix").addEventListener("click", () => {
+          const sw = document.getElementById("switch-mix");
+          const next = !sw.classList.contains("on");
+          sw.classList.toggle("on", next);
+          postToNative({ action: "setMixWithOthers", value: next });
+        });
+
+        document.getElementById("toggle-duck").addEventListener("click", () => {
+          const sw = document.getElementById("switch-duck");
+          const next = !sw.classList.contains("on");
+          sw.classList.toggle("on", next);
+          postToNative({ action: "setDuckOthers", value: next });
+        });
+
+        // Notify Swift that DOM & liquidGL are ready
+        postToNative({ action: "ready" });
+      });
+
+      /* 6. Live State Receiver called from Swift at 25fps */
+      window.updateAppState = function (state) {
+        if (!state) return;
+
+        isStreamRunning = !!state.isRunning;
+        currentAudioPeak = Number(state.peakLevel || 0);
+
+        const orb = document.getElementById("status-orb");
+        if (orb) {
+          orb.classList.toggle("idle", !isStreamRunning);
+        }
+
+        const headline = document.getElementById("connection-headline");
+        if (headline && state.connectionStatus) {
+          headline.textContent = state.connectionStatus;
+        }
+
+        const subline = document.getElementById("bt-status-subline");
+        if (subline && state.btState) {
+          subline.textContent = state.btState;
+        }
+
+        const codecBadge = document.getElementById("codec-badge");
+        if (codecBadge && state.activeCodecName) {
+          codecBadge.textContent = state.activeCodecName;
+        }
+
+        const routeLabel = document.getElementById("route-label");
+        if (routeLabel && state.routeDescription) {
+          routeLabel.textContent = state.routeDescription;
+        }
+
+        const statLatency = document.getElementById("stat-latency");
+        if (statLatency && typeof state.estimatedBufferMs === "number") {
+          statLatency.innerHTML = `${state.estimatedBufferMs.toFixed(1)}<small>ms</small>`;
+        }
+
+        const statPackets = document.getElementById("stat-packets");
+        if (statPackets && typeof state.packetsReceived === "number") {
+          statPackets.textContent = state.packetsReceived.toLocaleString();
+        }
+
+        const statDropped = document.getElementById("stat-dropped");
+        if (statDropped && typeof state.packetsDropped === "number") {
+          statDropped.textContent = state.packetsDropped.toLocaleString();
+        }
+
+        // Stream Toggle Button
+        const streamBtn = document.getElementById("btn-toggle-stream");
+        const streamLabel = document.getElementById("label-stream");
+        const streamIcon = document.getElementById("icon-stream");
+        if (streamBtn && streamLabel && streamIcon) {
+          streamBtn.classList.toggle("streaming", isStreamRunning);
+          streamLabel.textContent = isStreamRunning
+            ? "Stop Audio Stream"
+            : "Start Audio Stream";
+          streamIcon.innerHTML = isStreamRunning
+            ? '<rect x="6" y="5" width="4" height="14" rx="1.5"></rect><rect x="14" y="5" width="4" height="14" rx="1.5"></rect>'
+            : '<path d="M7.5 5.2c0-1.3 1.4-2 2.5-1.4l9.3 5.4a1.7 1.7 0 0 1 0 2.9l-9.3 5.4c-1.1.6-2.5-.1-2.5-1.4z"/>';
+        }
+
+        // Sliders (only update if user isn't actively dragging)
+        if (volumeControl && !volumeControl.isDragging() && typeof state.volumeGain === "number") {
+          const pct = Math.round(state.volumeGain * 100);
+          document.getElementById("vol-readout").textContent = `${pct}%`;
+          volumeControl.setValue(pct);
+        }
+
+        if (bufferControl && !bufferControl.isDragging() && typeof state.targetBufferMs === "number") {
+          const ms = Math.round(state.targetBufferMs);
+          document.getElementById("buf-readout").textContent = `${ms} ms`;
+          bufferControl.setValue(ms);
+        }
+
+        // Toggles
+        if (typeof state.mixWithOthers === "boolean") {
+          document
+            .getElementById("switch-mix")
+            .classList.toggle("on", state.mixWithOthers);
+        }
+        if (typeof state.duckOthers === "boolean") {
+          document
+            .getElementById("switch-duck")
+            .classList.toggle("on", state.duckOthers);
+        }
+
+        // Discovered PC Endpoints
+        if (Array.isArray(state.endpoints)) {
+          const key = JSON.stringify(state.endpoints) + "|" + isStreamRunning;
+          if (key !== lastEndpointsKey) {
+            lastEndpointsKey = key;
+            const container = document.getElementById("endpoints-container");
+            const ipInput = document.getElementById("input-ip");
+            const portInput = document.getElementById("input-port");
+
+            if (state.endpoints.length === 0) {
+              container.innerHTML = `
+                <div class="endpoint-item">
+                  <div class="endpoint-meta">
+                    <span class="endpoint-name">Listening for Windows 11 PC...</span>
+                    <span class="endpoint-sub">Auto-discovery via BLE &amp; Wi-Fi UDP</span>
+                  </div>
+                </div>`;
+            } else {
+              container.innerHTML = "";
+              state.endpoints.forEach((ep) => {
+                const isConnected =
+                  isStreamRunning && ipInput.value.trim() === ep.ip;
+                const row = document.createElement("div");
+                row.className = "endpoint-item";
+                row.innerHTML = `
+                  <div class="endpoint-meta">
+                    <span class="endpoint-name">${ep.name}</span>
+                    <span class="endpoint-sub">${ep.ip}:${ep.port} &middot; ${ep.source}</span>
+                  </div>
+                  <button class="connect-pill ${isConnected ? "active" : ""}" type="button">
+                    ${isConnected ? "Connected" : "Connect"}
+                  </button>
+                `;
+                row.querySelector("button").addEventListener("click", () => {
+                  ipInput.value = ep.ip;
+                  portInput.value = String(ep.port);
+                  postToNative({
+                    action: "connectEndpoint",
+                    ip: ep.ip,
+                    port: ep.port,
+                  });
+                });
+                container.appendChild(row);
+              });
+            }
+          }
+        }
+      };
+    </script>
+  </body>
+</html>

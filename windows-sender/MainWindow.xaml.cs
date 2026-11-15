@@ -2,9 +2,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -19,6 +20,9 @@ public partial class MainWindow : Window
     private const string StartupRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string StartupValueName = "AirPulse";
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
     private readonly BleDiscoveryServer _bleDiscovery = new();
     private readonly WasapiAudioStreamer _audioStreamer = new();
     private readonly DispatcherTimer _uiTimer;
@@ -32,6 +36,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         InitializeSystemTrayIcon();
+
+        SourceInitialized += MainWindow_SourceInitialized;
 
         _bleDiscovery.StatusChanged += status =>
         {
@@ -55,6 +61,32 @@ public partial class MainWindow : Window
         Closed += MainWindow_Closed;
     }
 
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                // Enable Windows 11 Immersive Dark Titlebar (DWMWA_USE_IMMERSIVE_DARK_MODE = 20)
+                int darkMode = 1;
+                DwmSetWindowAttribute(hwnd, 20, ref darkMode, sizeof(int));
+
+                // Enable Windows 11 Rounded Corners (DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2)
+                int roundCorners = 2;
+                DwmSetWindowAttribute(hwnd, 33, ref roundCorners, sizeof(int));
+
+                // Enable Windows 11 Mica Backdrop (DWMWA_SYSTEMBACKDROP_TYPE = 38, DWMSBT_MAINWINDOW = 2)
+                int micaBackdrop = 2;
+                DwmSetWindowAttribute(hwnd, 38, ref micaBackdrop, sizeof(int));
+            }
+        }
+        catch
+        {
+            // Ignore on older builds
+        }
+    }
+
     private void InitializeSystemTrayIcon()
     {
         try
@@ -72,7 +104,7 @@ public partial class MainWindow : Window
             }
 
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            var openItem = new System.Windows.Forms.ToolStripMenuItem("Open AirPulse Dashboard");
+            var openItem = new System.Windows.Forms.ToolStripMenuItem("Open AirPulse");
             openItem.Click += (_, _) => Dispatcher.BeginInvoke(ShowFromTray);
             menu.Items.Add(openItem);
 
@@ -112,15 +144,12 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         RefreshPlaybackDevices();
-
-        // Ensure Windows Startup auto-run is registered by default
         SetWindowsStartupEnabled(true);
 
         int port = ParsePort();
         await _bleDiscovery.StartAsync(port);
         StartStreamingInternal();
 
-        // If launched by Windows Startup with --minimized, hide to System Tray immediately
         string[] args = Environment.GetCommandLineArgs();
         if (args.Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase)))
         {
@@ -132,7 +161,6 @@ public partial class MainWindow : Window
     {
         if (!_allowRealExit)
         {
-            // Hide to System Tray instead of closing!
             e.Cancel = true;
             Hide();
 
@@ -159,24 +187,6 @@ public partial class MainWindow : Window
         }
         _audioStreamer.Dispose();
         _bleDiscovery.Dispose();
-    }
-
-    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton == MouseButton.Left)
-        {
-            try { DragMove(); } catch { }
-        }
-    }
-
-    private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
-
-    private void CloseToTrayBtn_Click(object sender, RoutedEventArgs e)
-    {
-        Close(); // Triggers MainWindow_Closing which hides to System Tray
     }
 
     private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
@@ -279,12 +289,8 @@ public partial class MainWindow : Window
         if (_audioStreamer.IsStreaming)
         {
             _audioStreamer.Stop();
-            StartStopBtn.Content = "START STREAMING TO IPHONE";
-            StartStopBorder.Background = new LinearGradientBrush(
-                System.Windows.Media.Color.FromRgb(14, 165, 233),
-                System.Windows.Media.Color.FromRgb(37, 99, 235),
-                45.0
-            );
+            StartStopBtn.Content = "Start Streaming to iPhone";
+            StartStopBtn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 212));
             FrameSizeComboBox.IsEnabled = true;
             TelemetryText.Text = "Status: Stopped";
             PeakMeterBar.Value = 0;
@@ -314,12 +320,8 @@ public partial class MainWindow : Window
 
             _audioStreamer.Start(selectedDevice?.Id, port, TargetIpTextBox.Text, port);
 
-            StartStopBtn.Content = "STOP STREAMING";
-            StartStopBorder.Background = new LinearGradientBrush(
-                System.Windows.Media.Color.FromRgb(220, 38, 38),
-                System.Windows.Media.Color.FromRgb(153, 27, 27),
-                45.0
-            );
+            StartStopBtn.Content = "Stop Streaming";
+            StartStopBtn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(196, 43, 28));
             FrameSizeComboBox.IsEnabled = false;
         }
         catch (Exception ex)

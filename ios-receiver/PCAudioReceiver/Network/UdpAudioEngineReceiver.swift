@@ -13,6 +13,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
     @Published private(set) var packetsReceived: UInt64 = 0
     @Published private(set) var packetsDropped: UInt64 = 0
     @Published private(set) var estimatedBufferMs: Double = 0.0
+    @Published private(set) var outputPeakLevel: Float = 0.0
 
     @Published var volumeGain: Float = 1.0
     @Published var targetBufferMs: Double = 35.0 // Configurable 5ms - 80ms jitter ceiling
@@ -145,6 +146,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
             self.connectionStatus = "Disconnected"
             self.activeCodecName = "Idle"
             self.estimatedBufferMs = 0.0
+            self.outputPeakLevel = 0.0
         }
     }
 
@@ -294,14 +296,23 @@ final class UdpAudioEngineReceiver: ObservableObject {
                     packetsDropped &+= droppedThisStep
                 }
 
-                // Throttle UI telemetry updates to every 20 packets (~100ms)
-                if totalRecv % 20 == 1 {
-                    let codecLabel = isOpus ? "Opus 48kHz Stereo" : "Raw PCM16 48kHz Stereo"
+                // Throttle UI telemetry updates to every 8 packets (~80ms)
+                if totalRecv % 8 == 1 {
+                    var peak: Float = 0.0
+                    if let ch = validBuffer.floatChannelData?[0] {
+                        let n = Int(min(validBuffer.frameLength, 240))
+                        for i in stride(from: 0, to: n, by: 4) {
+                            let a = abs(ch[i])
+                            if a > peak { peak = a }
+                        }
+                    }
+                    let codecLabel = isOpus ? "Opus 48kHz" : "PCM 48kHz"
                     let bufferedMs = Double(currentQueued) * frameMs
                     DispatchQueue.main.async {
                         self.connectionStatus = "Streaming Live Audio"
                         self.activeCodecName = codecLabel
                         self.estimatedBufferMs = bufferedMs
+                        self.outputPeakLevel = min(1.0, peak)
                     }
                 }
             }
