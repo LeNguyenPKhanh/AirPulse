@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Concentus;
 using Concentus.Enums;
 using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 using PcAudioStreamer.Protocol;
 
@@ -22,22 +24,64 @@ public sealed record AudioDeviceItem(string Id, string FriendlyName, bool IsDefa
         : (IsDefault ? $"{FriendlyName} (Current Default)" : FriendlyName);
 }
 
-/// <summary>
-/// Custom low-latency WASAPI Loopback capture using a 10ms buffer instead of NAudio's default 100ms buffer
-/// (which caused 62ms gaps between callbacks and triggered the iPhone's 30ms silence keep-alive timer!).
-/// </summary>
-public sealed class LowLatencyLoopbackCapture : WasapiCapture
-{
-    public LowLatencyLoopbackCapture(MMDevice captureDevice)
-        : base(captureDevice, useEventSync: false, audioBufferMillisecondsLength: 10)
-    {
-    }
+#region Windows 11 Process Loopback COM Interop (Pre-Mute / Pre-Volume System Audio Capture)
 
-    protected override AudioClientStreamFlags GetAudioClientStreamFlags()
+[StructLayout(LayoutKind.Sequential)]
+internal struct AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS
+{
+    public uint TargetProcessId;
+    public uint ProcessLoopbackMode; // 0 = INCLUDE, 1 = EXCLUDE_TARGET_PROCESS_TREE
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct AUDIOCLIENT_ACTIVATION_PARAMS
+{
+    public uint ActivationType; // 1 = AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK
+    public AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS ProcessLoopbackParams;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct PROPVARIANT_BLOB
+{
+    public ushort vt; // VT_BLOB = 65
+    public ushort wReserved1;
+    public ushort wReserved2;
+    public ushort wReserved3;
+    public uint cbSize;
+    public IntPtr pBlobData;
+}
+
+[ComImport, Guid("41D949AB-9862-444A-80F6-C261334DA5EB"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IActivateAudioInterfaceCompletionHandler
+{
+    void ActivateCompleted(IActivateAudioInterfaceAsyncOperation activateOperation);
+}
+
+[ComImport, Guid("72A22D78-CDE4-431D-B8CC-843A71199B6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IActivateAudioInterfaceAsyncOperation
+{
+    void GetActivateResult(out int activateResult, [MarshalAs(UnmanagedType.IUnknown)] out object activatedInterface);
+}
+
+[ComImport, Guid("94EA2B94-E9CC-49E0-C0FF-EE64CA8F5B90"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAgileObject
+{
+}
+
+internal sealed class ActivateCompletionHandler : IActivateAudioInterfaceCompletionHandler, IAgileObject
+{
+    public readonly ManualResetEventSlim Done = new(false);
+    public int HResult = -1;
+    public object? AudioClientObj;
+
+    public void ActivateCompleted(IActivateAudioInterfaceAsyncOperation activateOperation)
     {
-        return AudioClientStreamFlags.Loopback | base.GetAudioClientStreamFlags();
+        activateOperation.GetActivateResult(out HResult, out AudioClientObj);
+        Done.Set();
     }
 }
+
+#endregion
 
 public sealed class WasapiAudioStreamer : IDisposable
 {
@@ -47,18 +91,21 @@ public sealed class WasapiAudioStreamer : IDisposable
     [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
     private static extern uint TimeEndPeriod(uint uMilliseconds);
 
-    private static readonly Guid IeeeFloatSubtype = new("00000003-0000-0010-8000-00aa00389b71");
+    [DllImport("Mmdevapi.dll", ExactSpelling = true, PreserveSig = false)]
+    private static extern void ActivateAudioInterfaceAsync(
+        [MarshalAs(UnmanagedType.LPWStr)] string deviceInterfacePath,
+        [MarshalAs(UnmanagedType.LPStruct)] Guid riid,
+        ref PROPVARIANT_BLOB activationParams,
+        IActivateAudioInterfaceCompletionHandler completionHandler,
+        out IActivateAudioInterfaceAsyncOperation activationOperation);
 
     // 480 stereo samples @ 48kHz = 10.0ms per UDP packet
     private const int SamplesPerChannelPerPacket = 480;
     private const int InterleavedShortsPerPacket = SamplesPerChannelPerPacket * AudioPacketProtocol.Channels; // 960 shorts = 1920 bytes
 
-    private LowLatencyLoopbackCapture? _capture;
-    private MMDevice? _activeDevice;
-    private string? _requestedDeviceId;
-    private string? _activeDeviceId;
-    private bool _weMutedActiveDevice;
-    private bool _needsPrebufferCushion = true;
+    private AudioClient? _processLoopbackClient;
+    private readonly Dictionary<string, (bool OrigMute, float OrigVol)> _savedDeviceStates = new();
+    private readonly object _muteLock = new();
 
     private UdpClient? _udpSocket;
     private IPEndPoint? _targetEndpoint;
@@ -67,25 +114,18 @@ public sealed class WasapiAudioStreamer : IDisposable
 
     private ushort _sequenceNumber;
     private uint _sampleTimestamp;
-    private long _lastAudioSendTick;
     private long _totalPacketsSent;
     private long _totalBytesSent;
 
-    // Continuous resampler state across WASAPI buffer boundaries (eliminates boundary clicks on 44.1kHz devices)
-    private double _resamplePhase;
-    private float _prevLeftSample;
-    private float _prevRightSample;
-    private bool _hasPrevSample;
-
-    // Frame accumulator for exact 480-sample (10ms) packets
     private readonly short[] _accumBuffer = new short[InterleavedShortsPerPacket * 16];
     private int _accumCount;
-    private readonly object _captureLock = new();
+    private bool _needsPrebufferCushion = true;
+    private int _consecutiveSendErrors;
 
     private bool _mutePcSpeaker = true;
 
     public bool IsStreaming { get; private set; }
-    public bool UseOpusCodec { get; set; } = false; // Raw PCM 16-bit by default for 100% distortion-free audio
+    public bool UseOpusCodec { get; set; } = false; // Raw PCM 16-bit by default
     public int FrameDurationMs { get; set; } = 10;
     public int OpusBitrateBps { get; set; } = 192000;
     public float VolumeGain { get; set; } = 1.0f;
@@ -112,25 +152,26 @@ public sealed class WasapiAudioStreamer : IDisposable
     {
         var list = new List<AudioDeviceItem>
         {
-            new(AudioDeviceItem.AutoDefaultId, "Auto (Follow Windows Default Speaker)", false)
+            new(AudioDeviceItem.AutoDefaultId, "System-Wide Pre-Mute Capture (All PC Apps)", true)
         };
 
-        using var enumerator = new MMDeviceEnumerator();
-        string? defaultId = null;
         try
         {
-            using var def = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            defaultId = def?.ID;
-        }
-        catch
-        {
-            // Ignore if no default device
-        }
+            using var enumerator = new MMDeviceEnumerator();
+            string? defaultId = null;
+            try
+            {
+                using var def = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                defaultId = def?.ID;
+            }
+            catch { }
 
-        foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
-        {
-            list.Add(new AudioDeviceItem(device.ID, device.FriendlyName, device.ID == defaultId));
+            foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+            {
+                list.Add(new AudioDeviceItem(device.ID, device.FriendlyName, device.ID == defaultId));
+            }
         }
+        catch { }
 
         return list;
     }
@@ -147,16 +188,10 @@ public sealed class WasapiAudioStreamer : IDisposable
         }
     }
 
-    /// <summary>
-    /// Allows switching the captured Windows playback device live without stopping the UDP session.
-    /// </summary>
     public void SwitchCaptureDevice(string? deviceId)
     {
-        _requestedDeviceId = deviceId;
-        if (IsStreaming)
-        {
-            RestartWasapiCaptureInternal();
-        }
+        // Process Loopback automatically captures across all output devices!
+        ApplyPcSpeakerMuteState();
     }
 
     public void Start(string? deviceId, int listenPort, string? initialTargetIp, int targetPort)
@@ -166,12 +201,13 @@ public sealed class WasapiAudioStreamer : IDisposable
 
         TimeBeginPeriod(1);
 
-        _requestedDeviceId = deviceId;
         _cts = new CancellationTokenSource();
         _sequenceNumber = 0;
         _sampleTimestamp = 0;
         _totalPacketsSent = 0;
         _totalBytesSent = 0;
+        _accumCount = 0;
+        _needsPrebufferCushion = true;
 
         _opusEncoder = OpusCodecFactory.CreateEncoder(
             AudioPacketProtocol.SampleRate,
@@ -195,94 +231,301 @@ public sealed class WasapiAudioStreamer : IDisposable
         }
 
         IsStreaming = true;
-        RestartWasapiCaptureInternal();
 
-        // 1. Listen for iPhone UDP Handshake ("AH")
-        _ = Task.Run(() => ListenForIphoneHandshakeAsync(_cts.Token));
-
-        // 2. Monitor default audio device changes & send gentle keep-alive when PC is completely silent
-        _ = Task.Run(() => DeviceWatchdogAndKeepAliveLoopAsync(_cts.Token));
-    }
-
-    private void RestartWasapiCaptureInternal()
-    {
-        lock (_captureLock)
+        // 1. Start dedicated MTA thread for Windows 11 Process Loopback ("VAD\Process_Loopback")
+        // so COM interfaces stay on the same MTA thread with zero STA deadlock
+        Exception? initError = null;
+        using var readyEvent = new ManualResetEventSlim(false);
+        var captureThread = new Thread(() =>
         {
-            RestorePcSpeakerMuteState();
-
-            try { _capture?.StopRecording(); } catch { }
-            try { _capture?.Dispose(); } catch { }
-            _capture = null;
-
-            _accumCount = 0;
-            _resamplePhase = 0.0;
-            _hasPrevSample = false;
-
-            var enumerator = new MMDeviceEnumerator();
-            MMDevice? targetDevice = null;
-
-            if (!string.IsNullOrWhiteSpace(_requestedDeviceId) &&
-                _requestedDeviceId != AudioDeviceItem.AutoDefaultId)
+            try
             {
-                try { targetDevice = enumerator.GetDevice(_requestedDeviceId); } catch { }
+                _processLoopbackClient = CreateProcessLoopbackAudioClient();
+                _processLoopbackClient.Start();
+            }
+            catch (Exception ex)
+            {
+                initError = ex;
+            }
+            finally
+            {
+                readyEvent.Set();
             }
 
-            targetDevice ??= enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            _activeDevice = targetDevice;
-            _activeDeviceId = targetDevice.ID;
+            if (initError == null)
+            {
+                ProcessLoopbackCaptureThread(_cts.Token);
+            }
+        })
+        {
+            IsBackground = true,
+            Priority = ThreadPriority.Highest,
+            Name = "AirPulse-ProcessLoopback-MTA"
+        };
+        captureThread.SetApartmentState(ApartmentState.MTA);
+        captureThread.Start();
+        readyEvent.Wait(4000);
 
-            _capture = new LowLatencyLoopbackCapture(targetDevice);
-            _capture.DataAvailable += OnWasapiDataAvailable;
-            _lastAudioSendTick = Environment.TickCount64;
-            _capture.StartRecording();
+        if (initError != null)
+        {
+            IsStreaming = false;
+            try { _udpSocket?.Close(); } catch { }
+            throw initError;
+        }
 
-            ApplyPcSpeakerMuteState();
+        ApplyPcSpeakerMuteState();
+
+        // 2. Listen for iPhone UDP Handshake ("AH")
+        _ = Task.Run(() => ListenForIphoneHandshakeAsync(_cts.Token));
+    }
+
+    private static AudioClient CreateProcessLoopbackAudioClient()
+    {
+        var actParams = new AUDIOCLIENT_ACTIVATION_PARAMS
+        {
+            ActivationType = 1, // AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK
+            ProcessLoopbackParams = new AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS
+            {
+                TargetProcessId = (uint)Process.GetCurrentProcess().Id,
+                ProcessLoopbackMode = 1 // PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE (all apps on PC)
+            }
+        };
+
+        IntPtr pParams = Marshal.AllocHGlobal(Marshal.SizeOf(actParams));
+        try
+        {
+            Marshal.StructureToPtr(actParams, pParams, false);
+            var propVar = new PROPVARIANT_BLOB
+            {
+                vt = 65, // VT_BLOB
+                cbSize = (uint)Marshal.SizeOf(actParams),
+                pBlobData = pParams
+            };
+
+            var handler = new ActivateCompletionHandler();
+            Guid iidAudioClient = new("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2");
+            ActivateAudioInterfaceAsync("VAD\\Process_Loopback", iidAudioClient, ref propVar, handler, out _);
+            handler.Done.Wait(3000);
+
+            if (handler.HResult != 0 || handler.AudioClientObj is not IAudioClient iAudioClient)
+            {
+                throw new InvalidOperationException($"Failed to activate Windows Process Loopback (HRESULT 0x{handler.HResult:X8})");
+            }
+
+            var client = new AudioClient(iAudioClient);
+            // Initialize directly at 48,000 Hz Stereo IEEE Float (zero resampling needed!)
+            var format = WaveFormat.CreateIeeeFloatWaveFormat(AudioPacketProtocol.SampleRate, AudioPacketProtocol.Channels);
+            client.Initialize(
+                AudioClientShareMode.Shared,
+                AudioClientStreamFlags.Loopback,
+                100000, // 10ms buffer in 100ns units
+                0,
+                format,
+                Guid.Empty
+            );
+            return client;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pParams);
+        }
+    }
+
+    private void ProcessLoopbackCaptureThread(CancellationToken token)
+    {
+        var client = _processLoopbackClient;
+        if (client == null)
+            return;
+
+        var captureClient = client.AudioCaptureClient;
+        short[] cushionBuf = new short[InterleavedShortsPerPacket];
+        short[] silentBuf = new short[InterleavedShortsPerPacket];
+        long lastPacketSentTick = Environment.TickCount64;
+
+        while (!token.IsCancellationRequested && IsStreaming)
+        {
+            Thread.Sleep(5);
+
+            try
+            {
+                int packetSize = captureClient.GetNextPacketSize();
+                bool capturedAny = false;
+
+                while (packetSize > 0 && !token.IsCancellationRequested)
+                {
+                    IntPtr pBuffer = captureClient.GetBuffer(out int numFrames, out AudioClientBufferFlags flags);
+                    if (numFrames > 0)
+                    {
+                        capturedAny = true;
+                        float gain = VolumeGain;
+                        float maxPeak = 0f;
+                        bool isSilentFlag = (flags & AudioClientBufferFlags.Silent) != 0;
+
+                        int shortsToWrite = numFrames * 2;
+                        int spaceLeft = _accumBuffer.Length - _accumCount;
+                        int count = Math.Min(spaceLeft, shortsToWrite);
+
+                        unsafe
+                        {
+                            float* pf = (float*)pBuffer;
+                            for (int i = 0; i < count; i++)
+                            {
+                                float sample = isSilentFlag ? 0f : (pf[i] * gain);
+                                float abs = Math.Abs(sample);
+                                if (abs > maxPeak) maxPeak = abs;
+
+                                sample = Math.Clamp(sample, -1.0f, 1.0f);
+                                _accumBuffer[_accumCount + i] = (short)(sample * 32767f);
+                            }
+                        }
+
+                        _accumCount += count;
+                        CurrentPeakLevel = Math.Clamp(maxPeak, 0f, 1f);
+                        PeakLevelUpdated?.Invoke(CurrentPeakLevel);
+                    }
+
+                    captureClient.ReleaseBuffer(numFrames);
+                    packetSize = captureClient.GetNextPacketSize();
+                }
+
+                // Transmit all complete 10ms (480-frame) packets
+                while (_accumCount >= InterleavedShortsPerPacket)
+                {
+                    if (_needsPrebufferCushion && _targetEndpoint != null)
+                    {
+                        _needsPrebufferCushion = false;
+                        for (int c = 0; c < 3; c++)
+                        {
+                            EncodeAndSendFrame(cushionBuf.AsSpan(), SamplesPerChannelPerPacket, PacketFlags.None);
+                        }
+                    }
+
+                    EncodeAndSendFrame(
+                        _accumBuffer.AsSpan(0, InterleavedShortsPerPacket),
+                        SamplesPerChannelPerPacket,
+                        PacketFlags.None
+                    );
+                    lastPacketSentTick = Environment.TickCount64;
+
+                    int remaining = _accumCount - InterleavedShortsPerPacket;
+                    if (remaining > 0)
+                    {
+                        _accumBuffer.AsSpan(InterleavedShortsPerPacket, remaining).CopyTo(_accumBuffer.AsSpan(0, remaining));
+                    }
+                    _accumCount = remaining;
+                }
+
+                // If PC is completely idle (no audio apps open), send a keep-alive every 150ms
+                if (!capturedAny && (Environment.TickCount64 - lastPacketSentTick) >= 150 && _targetEndpoint != null)
+                {
+                    CurrentPeakLevel = 0f;
+                    PeakLevelUpdated?.Invoke(0f);
+                    lastPacketSentTick = Environment.TickCount64;
+                    EncodeAndSendFrame(
+                        silentBuf.AsSpan(),
+                        SamplesPerChannelPerPacket,
+                        PacketFlags.HeartbeatKeepAlive | PacketFlags.SilentFrame
+                    );
+                }
+            }
+            catch
+            {
+                // Ignore transient capture errors
+            }
         }
     }
 
     private void ApplyPcSpeakerMuteState()
     {
-        if (_activeDevice == null)
-            return;
-
-        try
+        lock (_muteLock)
         {
+            // Only mute PC speakers when an iPhone is actively connected AND the Mute checkbox is checked!
             bool shouldMute = IsStreaming && _mutePcSpeaker && _targetEndpoint != null;
-            if (shouldMute)
-            {
-                if (!_activeDevice.AudioEndpointVolume.Mute)
-                {
-                    _activeDevice.AudioEndpointVolume.Mute = true;
-                    _weMutedActiveDevice = true;
-                }
-            }
-            else
+            if (!shouldMute)
             {
                 RestorePcSpeakerMuteState();
+                return;
             }
-        }
-        catch
-        {
-            // Ignore volume API errors
+
+            try
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                foreach (var dev in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+                {
+                    try
+                    {
+                        if (!_savedDeviceStates.ContainsKey(dev.ID))
+                        {
+                            _savedDeviceStates[dev.ID] = (
+                                dev.AudioEndpointVolume.Mute,
+                                dev.AudioEndpointVolume.MasterVolumeLevelScalar
+                            );
+                        }
+
+                        // Because we capture via Windows 11 Process Loopback (Pre-Mute!), we can safely
+                        // set Mute = true on ALL speakers without affecting the iPhone audio stream at all!
+                        if (!dev.AudioEndpointVolume.Mute)
+                        {
+                            dev.AudioEndpointVolume.Mute = true;
+                        }
+
+                        // For Bluetooth speakers (like EMBERTON II), also set MasterVolume = 0 so their amp is 100% silent
+                        if (!dev.FriendlyName.Contains("Realtek", StringComparison.OrdinalIgnoreCase) &&
+                            dev.AudioEndpointVolume.MasterVolumeLevelScalar > 0.0f)
+                        {
+                            dev.AudioEndpointVolume.MasterVolumeLevelScalar = 0.0f;
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        dev.Dispose();
+                    }
+                }
+            }
+            catch { }
         }
     }
 
     private void RestorePcSpeakerMuteState()
     {
-        if (_activeDevice == null)
-            return;
+        lock (_muteLock)
+        {
+            if (_savedDeviceStates.Count == 0)
+                return;
 
-        try
-        {
-            if (_weMutedActiveDevice)
+            try
             {
-                _activeDevice.AudioEndpointVolume.Mute = false;
-                _weMutedActiveDevice = false;
+                using var enumerator = new MMDeviceEnumerator();
+                foreach (var dev in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+                {
+                    try
+                    {
+                        if (_savedDeviceStates.TryGetValue(dev.ID, out var saved))
+                        {
+                            dev.AudioEndpointVolume.Mute = saved.OrigMute;
+                            if (saved.OrigVol > 0.02f)
+                            {
+                                dev.AudioEndpointVolume.MasterVolumeLevelScalar = saved.OrigVol;
+                            }
+                        }
+                        else
+                        {
+                            dev.AudioEndpointVolume.Mute = false;
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        dev.Dispose();
+                    }
+                }
             }
-        }
-        catch
-        {
-            // Ignore shutdown errors
+            catch { }
+            finally
+            {
+                _savedDeviceStates.Clear();
+            }
         }
     }
 
@@ -315,8 +558,9 @@ public sealed class WasapiAudioStreamer : IDisposable
                     }
 
                     _targetEndpoint = new IPEndPoint(result.RemoteEndPoint.Address, clientPort);
+                    _consecutiveSendErrors = 0;
                     _needsPrebufferCushion = true;
-                    ConnectedClientInfo = $"Connected: {deviceLabel} ({_targetEndpoint})";
+                    ConnectedClientInfo = $"Connected: {deviceLabel} ({_targetEndpoint}) • PC Muted";
                     ClientConnected?.Invoke(ConnectedClientInfo);
 
                     ApplyPcSpeakerMuteState();
@@ -329,6 +573,11 @@ public sealed class WasapiAudioStreamer : IDisposable
             {
                 break;
             }
+            catch (SocketException sockEx) when (sockEx.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                // ICMP Port Unreachable from iPhone: the user tapped STOP AUDIO STREAM on iPhone!
+                HandleClientDisconnected();
+            }
             catch
             {
                 // Ignore transient socket errors
@@ -336,221 +585,16 @@ public sealed class WasapiAudioStreamer : IDisposable
         }
     }
 
-    private async Task DeviceWatchdogAndKeepAliveLoopAsync(CancellationToken token)
+    private void HandleClientDisconnected()
     {
-        short[] silentPcm = new short[InterleavedShortsPerPacket];
-        int tickCounter = 0;
-
-        while (!token.IsCancellationRequested && IsStreaming)
-        {
-            await Task.Delay(50, token).ConfigureAwait(false);
-            tickCounter++;
-
-            // 1. Every ~500ms, if in Auto mode, check if the user switched Windows Default Output Device
-            if (tickCounter % 10 == 0 &&
-                (string.IsNullOrWhiteSpace(_requestedDeviceId) || _requestedDeviceId == AudioDeviceItem.AutoDefaultId))
-            {
-                try
-                {
-                    using var enumerator = new MMDeviceEnumerator();
-                    using var currentDefault = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-                    if (currentDefault != null && currentDefault.ID != _activeDeviceId)
-                    {
-                        RestartWasapiCaptureInternal();
-                    }
-                }
-                catch
-                {
-                    // Ignore transient device enumeration errors
-                }
-            }
-
-            // 2. Send a keep-alive frame every 25ms when PC has no audio so iPhone queue stays primed and never underruns
-            long elapsedSinceAudio = Environment.TickCount64 - Interlocked.Read(ref _lastAudioSendTick);
-            if (elapsedSinceAudio >= 150 && _targetEndpoint != null)
-            {
-                CurrentPeakLevel = 0f;
-                PeakLevelUpdated?.Invoke(0f);
-                _needsPrebufferCushion = true;
-                Interlocked.Exchange(ref _lastAudioSendTick, Environment.TickCount64);
-
-                lock (_captureLock)
-                {
-                    EncodeAndSendFrame(
-                        silentPcm.AsSpan(),
-                        SamplesPerChannelPerPacket,
-                        PacketFlags.HeartbeatKeepAlive | PacketFlags.SilentFrame
-                    );
-                }
-            }
-        }
-    }
-
-    private void OnWasapiDataAvailable(object? sender, WaveInEventArgs e)
-    {
-        if (e.BytesRecorded <= 0 || _capture == null)
+        if (_targetEndpoint == null)
             return;
 
-        Interlocked.Exchange(ref _lastAudioSendTick, Environment.TickCount64);
-
-        lock (_captureLock)
-        {
-            if (_capture == null)
-                return;
-
-            var format = _capture.WaveFormat;
-            Span<short> converted = ConvertWasapiBufferToPcm16Stereo48k(e.Buffer, e.BytesRecorded, format, out float peak);
-            CurrentPeakLevel = peak;
-            PeakLevelUpdated?.Invoke(peak);
-
-            if (_targetEndpoint == null || converted.IsEmpty)
-                return;
-
-            // Append converted samples to accumulator
-            int spaceLeft = _accumBuffer.Length - _accumCount;
-            int toCopy = Math.Min(spaceLeft, converted.Length);
-            converted.Slice(0, toCopy).CopyTo(_accumBuffer.AsSpan(_accumCount, toCopy));
-            _accumCount += toCopy;
-
-            // Send complete 10ms (480-sample) packets
-            int packetsSentInBurst = 0;
-            while (_accumCount >= InterleavedShortsPerPacket)
-            {
-                if (_needsPrebufferCushion)
-                {
-                    _needsPrebufferCushion = false;
-                    // Prime the iPhone AVAudioPlayerNode queue with 3 silent 10ms cushion buffers (30ms ahead of playhead)
-                    // so Packet N+1 always arrives over Wi-Fi BEFORE Packet N finishes playing!
-                    Span<short> cushion = stackalloc short[InterleavedShortsPerPacket];
-                    cushion.Clear();
-                    for (int c = 0; c < 3; c++)
-                    {
-                        EncodeAndSendFrame(cushion, SamplesPerChannelPerPacket, PacketFlags.None);
-                    }
-                }
-
-                if (packetsSentInBurst > 0)
-                {
-                    // Gentle 2ms spacing when a callback delivers >1 packet
-                    Thread.Sleep(2);
-                }
-
-                EncodeAndSendFrame(
-                    _accumBuffer.AsSpan(0, InterleavedShortsPerPacket),
-                    SamplesPerChannelPerPacket,
-                    PacketFlags.None
-                );
-                packetsSentInBurst++;
-
-                int remaining = _accumCount - InterleavedShortsPerPacket;
-                if (remaining > 0)
-                {
-                    _accumBuffer.AsSpan(InterleavedShortsPerPacket, remaining).CopyTo(_accumBuffer.AsSpan(0, remaining));
-                }
-                _accumCount = remaining;
-            }
-        }
-    }
-
-    private Span<short> ConvertWasapiBufferToPcm16Stereo48k(byte[] buffer, int bytesRecorded, WaveFormat format, out float maxPeak)
-    {
-        maxPeak = 0f;
-        float gain = VolumeGain;
-        int srcChannels = Math.Max(1, format.Channels);
-
-        if (format.Encoding == WaveFormatEncoding.IeeeFloat ||
-            (format is WaveFormatExtensible ext && ext.SubFormat == IeeeFloatSubtype))
-        {
-            int totalFloats = bytesRecorded / 4;
-            int srcFrames = totalFloats / srcChannels;
-            if (srcFrames <= 0)
-                return Span<short>.Empty;
-
-            // Fast 1:1 path for 48,000 Hz (e.g. Realtek(R) Audio) — ZERO resampling needed!
-            if (format.SampleRate == AudioPacketProtocol.SampleRate)
-            {
-                short[] output = new short[srcFrames * 2];
-                for (int i = 0; i < srcFrames; i++)
-                {
-                    int byteIndex = i * srcChannels * 4;
-                    float left = BitConverter.ToSingle(buffer, byteIndex) * gain;
-                    float right = (srcChannels >= 2 ? BitConverter.ToSingle(buffer, byteIndex + 4) : left) * gain;
-
-                    float absL = Math.Abs(left);
-                    float absR = Math.Abs(right);
-                    if (absL > maxPeak) maxPeak = absL;
-                    if (absR > maxPeak) maxPeak = absR;
-
-                    output[i * 2] = (short)(Math.Clamp(left, -1.0f, 1.0f) * 32767f);
-                    output[i * 2 + 1] = (short)(Math.Clamp(right, -1.0f, 1.0f) * 32767f);
-                }
-                maxPeak = Math.Clamp(maxPeak, 0f, 1f);
-                return output.AsSpan();
-            }
-
-            // Phase-continuous linear interpolation for 44,100 Hz -> 48,000 Hz (zero boundary clicks!)
-            double step = (double)format.SampleRate / AudioPacketProtocol.SampleRate; // e.g. 44100 / 48000 = 0.91875
-            int maxOutFrames = (int)Math.Ceiling((srcFrames + 1) / step) + 2;
-            short[] resampled = new short[maxOutFrames * 2];
-            int outFrameCount = 0;
-
-            if (!_hasPrevSample)
-            {
-                _prevLeftSample = BitConverter.ToSingle(buffer, 0);
-                _prevRightSample = srcChannels >= 2 ? BitConverter.ToSingle(buffer, 4) : _prevLeftSample;
-                _hasPrevSample = true;
-                _resamplePhase = 0.0;
-            }
-
-            while (_resamplePhase < srcFrames)
-            {
-                int idx = (int)_resamplePhase;
-                float frac = (float)(_resamplePhase - idx);
-
-                float l0, r0, l1, r1;
-                if (idx == 0)
-                {
-                    l0 = _prevLeftSample;
-                    r0 = _prevRightSample;
-                    l1 = BitConverter.ToSingle(buffer, 0);
-                    r1 = srcChannels >= 2 ? BitConverter.ToSingle(buffer, 4) : l1;
-                }
-                else
-                {
-                    int b0 = (idx - 1) * srcChannels * 4;
-                    int b1 = idx * srcChannels * 4;
-                    l0 = BitConverter.ToSingle(buffer, b0);
-                    r0 = srcChannels >= 2 ? BitConverter.ToSingle(buffer, b0 + 4) : l0;
-                    l1 = BitConverter.ToSingle(buffer, b1);
-                    r1 = srcChannels >= 2 ? BitConverter.ToSingle(buffer, b1 + 4) : l1;
-                }
-
-                float left = (l0 + frac * (l1 - l0)) * gain;
-                float right = (r0 + frac * (r1 - r0)) * gain;
-
-                float absL = Math.Abs(left);
-                float absR = Math.Abs(right);
-                if (absL > maxPeak) maxPeak = absL;
-                if (absR > maxPeak) maxPeak = absR;
-
-                resampled[outFrameCount * 2] = (short)(Math.Clamp(left, -1.0f, 1.0f) * 32767f);
-                resampled[outFrameCount * 2 + 1] = (short)(Math.Clamp(right, -1.0f, 1.0f) * 32767f);
-                outFrameCount++;
-
-                _resamplePhase += step;
-            }
-
-            // Save last sample of this buffer and wrap phase for the next callback
-            int lastByteIdx = (srcFrames - 1) * srcChannels * 4;
-            _prevLeftSample = BitConverter.ToSingle(buffer, lastByteIdx);
-            _prevRightSample = srcChannels >= 2 ? BitConverter.ToSingle(buffer, lastByteIdx + 4) : _prevLeftSample;
-            _resamplePhase -= srcFrames;
-
-            maxPeak = Math.Clamp(maxPeak, 0f, 1f);
-            return resampled.AsSpan(0, outFrameCount * 2);
-        }
-
-        return Span<short>.Empty;
+        _targetEndpoint = null;
+        _consecutiveSendErrors = 0;
+        RestorePcSpeakerMuteState();
+        ConnectedClientInfo = "iPhone Stopped Stream • PC Speakers Restored";
+        ClientConnected?.Invoke(ConnectedClientInfo);
     }
 
     private void EncodeAndSendFrame(Span<short> interleavedPcm, int samplesPerChannel, PacketFlags flags)
@@ -599,8 +643,16 @@ public sealed class WasapiAudioStreamer : IDisposable
         try
         {
             socket.Send(packetBuffer, totalPacketSize, endpoint);
+            _consecutiveSendErrors = 0;
             Interlocked.Increment(ref _totalPacketsSent);
             Interlocked.Add(ref _totalBytesSent, totalPacketSize);
+        }
+        catch (SocketException sockEx) when (sockEx.SocketErrorCode == SocketError.ConnectionReset)
+        {
+            if (++_consecutiveSendErrors >= 3)
+            {
+                HandleClientDisconnected();
+            }
         }
         catch
         {
@@ -618,12 +670,12 @@ public sealed class WasapiAudioStreamer : IDisposable
         TimeEndPeriod(1);
 
         try { _cts?.Cancel(); } catch { }
-        try { _capture?.StopRecording(); } catch { }
-        try { _capture?.Dispose(); } catch { }
+        try { _processLoopbackClient?.Stop(); } catch { }
+        try { _processLoopbackClient?.Dispose(); } catch { }
         try { _udpSocket?.Close(); } catch { }
         try { _udpSocket?.Dispose(); } catch { }
 
-        _capture = null;
+        _processLoopbackClient = null;
         _udpSocket = null;
         CurrentPeakLevel = 0f;
     }

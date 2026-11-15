@@ -1,15 +1,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Windows;
 
 namespace PcAudioStreamer;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     public App()
     {
-        // Close any previous running instance of PcAudioStreamer so only one window & UDP listener is active
+        // Close any previous running instance of PcAudioStreamer so only one instance is active
         try
         {
             var current = Process.GetCurrentProcess();

@@ -3,143 +3,277 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="AirPulse — PC to iPhone Audio Streamer"
         Icon="pack://application:,,,/Assets/app.ico"
-        Height="650" Width="560"
+        Height="710" Width="570"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         ResizeMode="CanMinimize"
         WindowStartupLocation="CenterScreen"
-        Background="#0F172A"
         Foreground="#F8FAFC">
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Window.Resources>
+        <!-- Liquid Glass Refractive Specular Rim Border -->
+        <LinearGradientBrush x:Key="LiquidGlassRimBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#75FFFFFF" Offset="0.0"/>
+            <GradientStop Color="#2838BDF8" Offset="0.35"/>
+            <GradientStop Color="#0DFFFFFF" Offset="0.70"/>
+            <GradientStop Color="#55818CF8" Offset="1.0"/>
+        </LinearGradientBrush>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#1E293B" CornerRadius="10" Padding="16" Margin="0,0,0,14">
-            <StackPanel Orientation="Horizontal">
-                <Image Source="pack://application:,,,/Assets/logo.png" Width="46" Height="46" Margin="0,0,14,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="AirPulse • PC Audio Streamer" FontSize="20" FontWeight="Bold" Foreground="#38BDF8"/>
-                    <TextBlock x:Name="BleStatusText"
-                               Text="Initializing BLE &amp; LAN Auto-Discovery..."
-                               FontSize="12.5" Foreground="#94A3B8" Margin="0,4,0,0"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
+        <!-- Liquid Glass Surface Fill -->
+        <LinearGradientBrush x:Key="LiquidGlassFillBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#781E293B" Offset="0.0"/>
+            <GradientStop Color="#550F172A" Offset="0.5"/>
+            <GradientStop Color="#681E293B" Offset="1.0"/>
+        </LinearGradientBrush>
 
-        <!-- Audio Source Selection -->
-        <Border Grid.Row="1" Background="#1E293B" CornerRadius="10" Padding="16" Margin="0,0,0,14">
-            <StackPanel>
-                <TextBlock Text="1. Windows System Audio Source (WASAPI Loopback)" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
-                <Grid>
+        <!-- Primary Liquid Button Brush -->
+        <LinearGradientBrush x:Key="LiquidCyanBtnBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0EA5E9" Offset="0.0"/>
+            <GradientStop Color="#2563EB" Offset="1.0"/>
+        </LinearGradientBrush>
+    </Window.Resources>
+
+    <!-- Outer Shadow & Rounded Clip -->
+    <Border Margin="14" CornerRadius="22" BorderThickness="1.5" BorderBrush="{StaticResource LiquidGlassRimBrush}">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#F2070B19" Offset="0.0"/>
+                <GradientStop Color="#F50F172A" Offset="0.5"/>
+                <GradientStop Color="#F2090D1E" Offset="1.0"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="26" ShadowDepth="6" Opacity="0.75"/>
+        </Border.Effect>
+
+        <Grid ClipToBounds="True">
+            <!-- Animated Liquid Aurora Background Orbs -->
+            <Canvas IsHitTestVisible="False">
+                <!-- Cyan Glow Orb -->
+                <Ellipse Width="320" Height="320" Canvas.Left="-60" Canvas.Top="-50" Opacity="0.38">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#38BDF8" Offset="0.0"/>
+                            <GradientStop Color="#0038BDF8" Offset="1.0"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="(Canvas.Left)" From="-60" To="90" Duration="0:0:8"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)" From="-50" To="60" Duration="0:0:10"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+
+                <!-- Violet/Indigo Glow Orb -->
+                <Ellipse Width="360" Height="360" Canvas.Left="240" Canvas.Top="280" Opacity="0.32">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#818CF8" Offset="0.0"/>
+                            <GradientStop Color="#00818CF8" Offset="1.0"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="(Canvas.Left)" From="240" To="110" Duration="0:0:9"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)" From="280" To="160" Duration="0:0:11"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+            </Canvas>
+
+            <!-- Main Content Layout -->
+            <Grid Margin="20,14,20,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Custom Draggable Title Bar -->
+                <Grid Grid.Row="0" Margin="0,0,0,10" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <ComboBox x:Name="DeviceComboBox" Grid.Column="0" Height="34" VerticalContentAlignment="Center" Padding="8,0" SelectionChanged="DeviceComboBox_SelectionChanged"/>
-                    <Button x:Name="RefreshDevicesBtn" Grid.Column="1" Content="Refresh" Width="76" Height="34" Margin="8,0,0,0"
-                            Background="#334155" Foreground="White" BorderThickness="0" Click="RefreshDevicesBtn_Click"/>
-                </Grid>
-
-                <!-- Live Peak Meter -->
-                <TextBlock Text="Live Audio Output Level" FontSize="11.5" Foreground="#94A3B8" Margin="0,12,0,4"/>
-                <ProgressBar x:Name="PeakMeterBar" Minimum="0" Maximum="100" Value="0" Height="10"
-                             Background="#0F172A" Foreground="#22C55E" BorderThickness="0"/>
-
-                <!-- Mute PC Speaker Checkbox -->
-                <CheckBox x:Name="MutePcCheckBox"
-                          Content="Mute PC Speakers while streaming to iPhone (Auto-Restore on Stop)"
-                          IsChecked="True"
-                          Foreground="#38BDF8"
-                          FontWeight="Medium"
-                          Margin="0,10,0,0"
-                          Checked="MutePcCheckBox_Changed"
-                          Unchecked="MutePcCheckBox_Changed"/>
-            </StackPanel>
-        </Border>
-
-        <!-- iPhone Connection & Pairing -->
-        <Border Grid.Row="2" Background="#1E293B" CornerRadius="10" Padding="16" Margin="0,0,0,14">
-            <StackPanel>
-                <TextBlock Text="2. iPhone Receiver Endpoint (Auto BLE / Wi-Fi UDP)" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,6"/>
-                <TextBlock x:Name="ClientStatusText"
-                           Text="Waiting for iPhone one-tap connection (or enter iPhone IP below)..."
-                           FontSize="12.5" Foreground="#38BDF8" Margin="0,0,0,10"/>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="95"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name="TargetIpTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center"
-                             Padding="8,0" Text="" ToolTip="Optional: Manual iPhone IPv4 Address"/>
-                    <TextBox x:Name="UdpPortTextBox" Grid.Column="1" Height="32" VerticalContentAlignment="Center"
-                             Padding="8,0" Margin="8,0,0,0" Text="49152" ToolTip="UDP Port"/>
-                    <Button x:Name="ApplyTargetBtn" Grid.Column="2" Content="Set Target" Width="84" Height="32" Margin="8,0,0,0"
-                            Background="#334155" Foreground="White" BorderThickness="0" Click="ApplyTargetBtn_Click"/>
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- Codec, Frame Latency & Gain Controls -->
-        <Border Grid.Row="3" Background="#1E293B" CornerRadius="10" Padding="16" Margin="0,0,0,14">
-            <StackPanel>
-                <TextBlock Text="3. Low-Latency Codec &amp; Mixing Controls" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,10"/>
-
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                        <TextBlock Text="Audio Codec" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="CodecComboBox" Height="32" VerticalContentAlignment="Center" SelectionChanged="CodecComboBox_SelectionChanged">
-                            <ComboBoxItem Content="Raw PCM 16-bit (48kHz Crystal Clear - Recommended)" IsSelected="True"/>
-                            <ComboBoxItem Content="Opus (192 kbps Compressed)"/>
-                        </ComboBox>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" Fill="#38BDF8" Margin="4,0,8,0"/>
+                        <TextBlock Text="AIRPULSE • LIQUID GLASS AUDIO BRIDGE" FontSize="11" FontWeight="Bold" Foreground="#94A3B8"/>
                     </StackPanel>
-
-                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                        <TextBlock Text="UDP Frame Pacing" FontSize="12" Foreground="#94A3B8" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="FrameSizeComboBox" Height="32" VerticalContentAlignment="Center">
-                            <ComboBoxItem Content="7.5 ms (Single-MTU Smooth Pacing)" Tag="7" IsSelected="True"/>
-                            <ComboBoxItem Content="10 ms (High Stability)" Tag="10"/>
-                        </ComboBox>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="—" Width="32" Height="26" Background="#25FFFFFF" Foreground="#E2E8F0"
+                                BorderBrush="#35FFFFFF" BorderThickness="1" Margin="0,0,6,0" ToolTip="Minimize"
+                                Click="MinimizeBtn_Click"/>
+                        <Button Content="✕" Width="32" Height="26" Background="#35EF4444" Foreground="#FCA5A5"
+                                BorderBrush="#55EF4444" BorderThickness="1" ToolTip="Hide to System Tray (Keep Running in Background)"
+                                Click="CloseToTrayBtn_Click"/>
                     </StackPanel>
                 </Grid>
 
-                <!-- Volume Gain Slider -->
-                <DockPanel>
-                    <TextBlock Text="PC Stream Gain:" FontSize="12" Foreground="#94A3B8" Width="105" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="VolumeValueText" Text="100%" FontSize="12" Foreground="#E2E8F0" Width="45" DockPanel.Dock="Right" TextAlignment="Right" VerticalAlignment="Center"/>
-                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="200" Value="100" VerticalAlignment="Center" ValueChanged="VolumeSlider_ValueChanged"/>
-                </DockPanel>
-            </StackPanel>
-        </Border>
+                <!-- Header Liquid Glass Card -->
+                <Border Grid.Row="1" Background="{StaticResource LiquidGlassFillBrush}"
+                        BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        CornerRadius="16" Padding="16,14" Margin="0,0,0,12"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="pack://application:,,,/Assets/logo.png" Width="46" Height="46" Margin="0,0,14,0"
+                               VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="AirPulse • PC Audio Streamer" FontSize="19" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <TextBlock x:Name="BleStatusText"
+                                       Text="Initializing BLE &amp; LAN Auto-Discovery..."
+                                       FontSize="12" Foreground="#7DD3FC" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
 
-        <!-- Telemetry Footer -->
-        <Border Grid.Row="4" Background="#1E293B" CornerRadius="10" Padding="14" Margin="0,0,0,14">
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Name="TelemetryText"
-                           Text="Status: Ready • 48,000 Hz Stereo • Background Keep-Alive Enabled"
-                           FontSize="12.5" Foreground="#CBD5E1"/>
-                <TextBlock Text="Tip: Open the iOS Receiver app with 'Mix With Others' enabled to hear PC audio alongside iPhone apps &amp; locked screen."
-                           FontSize="11.5" Foreground="#64748B" TextWrapping="Wrap" Margin="0,4,0,0"/>
-            </StackPanel>
-        </Border>
+                <!-- 1. Audio Source & Background Options Card -->
+                <Border Grid.Row="2" Background="{StaticResource LiquidGlassFillBrush}"
+                        BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        CornerRadius="16" Padding="16,14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="1. System Audio Capture &amp; Smart Mute" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="DeviceComboBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center"
+                                      Padding="8,0" SelectionChanged="DeviceComboBox_SelectionChanged"/>
+                            <Button x:Name="RefreshDevicesBtn" Grid.Column="1" Content="Refresh" Width="74" Height="32" Margin="8,0,0,0"
+                                    Background="#38334155" Foreground="White" BorderBrush="{StaticResource LiquidGlassRimBrush}"
+                                    BorderThickness="1" Click="RefreshDevicesBtn_Click"/>
+                        </Grid>
 
-        <!-- Primary Action Button -->
-        <Button x:Name="StartStopBtn" Grid.Row="5" Height="48"
-                Content="START STREAMING TO IPHONE"
-                FontSize="15" FontWeight="Bold"
-                Background="#0284C7" Foreground="White" BorderThickness="0"
-                Click="StartStopBtn_Click"/>
-    </Grid>
+                        <!-- Live Peak Meter -->
+                        <DockPanel Margin="0,10,0,4">
+                            <TextBlock Text="Live Audio Output Level (Pre-Mute)" FontSize="11.5" Foreground="#94A3B8"/>
+                        </DockPanel>
+                        <ProgressBar x:Name="PeakMeterBar" Minimum="0" Maximum="100" Value="0" Height="8"
+                                     Background="#400F172A" Foreground="#38BDF8" BorderThickness="0"/>
+
+                        <!-- Smart PC Mute Checkbox -->
+                        <CheckBox x:Name="MutePcCheckBox"
+                                  Content="Mute PC Speakers when iPhone connects (Auto-Unmute on Stop)"
+                                  IsChecked="True"
+                                  Foreground="#E2E8F0"
+                                  FontSize="12"
+                                  Margin="0,10,0,0"
+                                  Checked="MutePcCheckBox_Changed"
+                                  Unchecked="MutePcCheckBox_Changed"/>
+
+                        <!-- Auto-Start & Tray Background Checkbox -->
+                        <CheckBox x:Name="AutoStartCheckBox"
+                                  Content="Auto-start in background when PC turns on (Close button hides to Tray)"
+                                  IsChecked="True"
+                                  Foreground="#7DD3FC"
+                                  FontSize="12"
+                                  Margin="0,6,0,0"
+                                  Checked="AutoStartCheckBox_Changed"
+                                  Unchecked="AutoStartCheckBox_Changed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. iPhone Endpoint Liquid Glass Card -->
+                <Border Grid.Row="3" Background="{StaticResource LiquidGlassFillBrush}"
+                        BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        CornerRadius="16" Padding="16,14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="2. iPhone Receiver Endpoint (Auto BLE / Wi-Fi UDP)" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="ClientStatusText"
+                                   Text="Waiting for iPhone one-tap connection..."
+                                   FontSize="12" Foreground="#38BDF8" Margin="0,0,0,8"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TargetIpTextBox" Grid.Column="0" Height="30" VerticalContentAlignment="Center"
+                                     Padding="8,0" Text="" ToolTip="Optional: Manual iPhone IPv4 Address"/>
+                            <TextBox x:Name="UdpPortTextBox" Grid.Column="1" Height="30" VerticalContentAlignment="Center"
+                                     Padding="8,0" Margin="8,0,0,0" Text="49152" ToolTip="UDP Port"/>
+                            <Button x:Name="ApplyTargetBtn" Grid.Column="2" Content="Set Target" Width="82" Height="30" Margin="8,0,0,0"
+                                    Background="#38334155" Foreground="White" BorderBrush="{StaticResource LiquidGlassRimBrush}"
+                                    BorderThickness="1" Click="ApplyTargetBtn_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Codec & Gain Liquid Glass Card -->
+                <Border Grid.Row="4" Background="{StaticResource LiquidGlassFillBrush}"
+                        BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        CornerRadius="16" Padding="16,14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="3. Studio Audio Codec &amp; Gain Control" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,0,0,8"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <TextBlock Text="Audio Codec" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                <ComboBox x:Name="CodecComboBox" Height="30" VerticalContentAlignment="Center" SelectionChanged="CodecComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="Raw PCM 16-bit (48kHz Crystal Clear)" IsSelected="True"/>
+                                    <ComboBoxItem Content="Opus (192 kbps Compressed)"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <TextBlock Text="UDP Frame Pacing" FontSize="11.5" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                <ComboBox x:Name="FrameSizeComboBox" Height="30" VerticalContentAlignment="Center">
+                                    <ComboBoxItem Content="10 ms (Process Loopback Locked)" Tag="10" IsSelected="True"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <DockPanel>
+                            <TextBlock Text="PC Stream Gain:" FontSize="12" Foreground="#94A3B8" Width="105" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="VolumeValueText" Text="100%" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" Width="45" DockPanel.Dock="Right" TextAlignment="Right" VerticalAlignment="Center"/>
+                            <Slider x:Name="VolumeSlider" Minimum="0" Maximum="200" Value="100" VerticalAlignment="Center" ValueChanged="VolumeSlider_ValueChanged"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Telemetry Card -->
+                <Border Grid.Row="5" Background="{StaticResource LiquidGlassFillBrush}"
+                        BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        CornerRadius="14" Padding="14,10" Margin="0,0,0,12">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="TelemetryText"
+                                   Text="Status: Ready • 48,000 Hz Stereo • Background Tray Active"
+                                   FontSize="12" Foreground="#E2E8F0"/>
+                        <TextBlock Text="Click ✕ at top-right to minimize to the Windows System Tray. Right-click the Tray icon to quit completely."
+                                   FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Primary Action Button -->
+                <Border Grid.Row="6" CornerRadius="14" BorderBrush="{StaticResource LiquidGlassRimBrush}" BorderThickness="1.2"
+                        Background="{StaticResource LiquidCyanBtnBrush}" x:Name="StartStopBorder">
+                    <Button x:Name="StartStopBtn" Height="44"
+                            Content="STOP STREAMING"
+                            FontSize="14" FontWeight="Bold"
+                            Background="Transparent" Foreground="White" BorderThickness="0"
+                            Click="StartStopBtn_Click"/>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>

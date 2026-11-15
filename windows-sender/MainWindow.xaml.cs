@@ -1,9 +1,13 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using PcAudioStreamer.Audio;
 using PcAudioStreamer.Discovery;
 using PcAudioStreamer.Protocol;
@@ -12,15 +16,22 @@ namespace PcAudioStreamer;
 
 public partial class MainWindow : Window
 {
+    private const string StartupRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string StartupValueName = "AirPulse";
+
     private readonly BleDiscoveryServer _bleDiscovery = new();
     private readonly WasapiAudioStreamer _audioStreamer = new();
     private readonly DispatcherTimer _uiTimer;
+    private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private bool _allowRealExit;
+    private bool _shownTrayTipOnce;
     private long _lastBytesSnapshot;
     private DateTime _lastSnapshotTime = DateTime.UtcNow;
 
     public MainWindow()
     {
         InitializeComponent();
+        InitializeSystemTrayIcon();
 
         _bleDiscovery.StatusChanged += status =>
         {
@@ -40,24 +51,168 @@ public partial class MainWindow : Window
         _uiTimer.Start();
 
         Loaded += MainWindow_Loaded;
+        Closing += MainWindow_Closing;
         Closed += MainWindow_Closed;
+    }
+
+    private void InitializeSystemTrayIcon()
+    {
+        try
+        {
+            _trayIcon = new System.Windows.Forms.NotifyIcon
+            {
+                Text = "AirPulse — PC to iPhone Audio Streamer (Running)",
+                Visible = true
+            };
+
+            var resourceStream = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico"));
+            if (resourceStream != null)
+            {
+                _trayIcon.Icon = new System.Drawing.Icon(resourceStream.Stream);
+            }
+
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            var openItem = new System.Windows.Forms.ToolStripMenuItem("Open AirPulse Dashboard");
+            openItem.Click += (_, _) => Dispatcher.BeginInvoke(ShowFromTray);
+            menu.Items.Add(openItem);
+
+            menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
+            var quitItem = new System.Windows.Forms.ToolStripMenuItem("Quit AirPulse Completely");
+            quitItem.Click += (_, _) => Dispatcher.BeginInvoke(() =>
+            {
+                _allowRealExit = true;
+                Close();
+            });
+            menu.Items.Add(quitItem);
+
+            _trayIcon.ContextMenuStrip = menu;
+            _trayIcon.DoubleClick += (_, _) => Dispatcher.BeginInvoke(ShowFromTray);
+            _trayIcon.MouseClick += (_, e) =>
+            {
+                if (e.Button == System.Windows.Forms.MouseButtons.Left)
+                {
+                    Dispatcher.BeginInvoke(ShowFromTray);
+                }
+            };
+        }
+        catch
+        {
+            // Ignore tray creation errors
+        }
+    }
+
+    private void ShowFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         RefreshPlaybackDevices();
+
+        // Ensure Windows Startup auto-run is registered by default
+        SetWindowsStartupEnabled(true);
+
         int port = ParsePort();
         await _bleDiscovery.StartAsync(port);
-
-        // Auto-start WASAPI capture & UDP handshake listener on launch so iPhone can connect immediately
         StartStreamingInternal();
+
+        // If launched by Windows Startup with --minimized, hide to System Tray immediately
+        string[] args = Environment.GetCommandLineArgs();
+        if (args.Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase)))
+        {
+            Hide();
+        }
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_allowRealExit)
+        {
+            // Hide to System Tray instead of closing!
+            e.Cancel = true;
+            Hide();
+
+            if (!_shownTrayTipOnce && _trayIcon != null)
+            {
+                _shownTrayTipOnce = true;
+                _trayIcon.ShowBalloonTip(
+                    2500,
+                    "AirPulse đang chạy ngầm",
+                    "Ứng dụng tiếp tục chạy ở khay hệ thống (System Tray). Nhấp vào biểu tượng AirPulse để mở lại.",
+                    System.Windows.Forms.ToolTipIcon.Info
+                );
+            }
+        }
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         _uiTimer.Stop();
+        if (_trayIcon != null)
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+        }
         _audioStreamer.Dispose();
         _bleDiscovery.Dispose();
+    }
+
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            try { DragMove(); } catch { }
+        }
+    }
+
+    private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void CloseToTrayBtn_Click(object sender, RoutedEventArgs e)
+    {
+        Close(); // Triggers MainWindow_Closing which hides to System Tray
+    }
+
+    private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (AutoStartCheckBox != null)
+        {
+            SetWindowsStartupEnabled(AutoStartCheckBox.IsChecked == true);
+        }
+    }
+
+    private static void SetWindowsStartupEnabled(bool enable)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(StartupRegistryKey, writable: true);
+            if (key == null)
+                return;
+
+            if (enable)
+            {
+                string exePath = Path.Combine(AppContext.BaseDirectory, "PcAudioStreamer.exe");
+                if (!File.Exists(exePath))
+                {
+                    exePath = Process.GetCurrentProcess().MainModule?.FileName ?? exePath;
+                }
+                key.SetValue(StartupValueName, $"\"{exePath}\" --minimized");
+            }
+            else
+            {
+                key.DeleteValue(StartupValueName, throwOnMissingValue: false);
+            }
+        }
+        catch
+        {
+            // Ignore registry permission errors
+        }
     }
 
     private void RefreshPlaybackDevices()
@@ -66,7 +221,6 @@ public partial class MainWindow : Window
         DeviceComboBox.ItemsSource = devices;
         if (devices.Count > 0)
         {
-            // Default to "Auto (Follow Windows Default Speaker)" so switching speakers in Windows works automatically!
             DeviceComboBox.SelectedIndex = 0;
         }
     }
@@ -126,8 +280,11 @@ public partial class MainWindow : Window
         {
             _audioStreamer.Stop();
             StartStopBtn.Content = "START STREAMING TO IPHONE";
-            StartStopBtn.Background = new SolidColorBrush(Color.FromRgb(2, 132, 199));
-            DeviceComboBox.IsEnabled = true;
+            StartStopBorder.Background = new LinearGradientBrush(
+                System.Windows.Media.Color.FromRgb(14, 165, 233),
+                System.Windows.Media.Color.FromRgb(37, 99, 235),
+                45.0
+            );
             FrameSizeComboBox.IsEnabled = true;
             TelemetryText.Text = "Status: Stopped";
             PeakMeterBar.Value = 0;
@@ -148,7 +305,7 @@ public partial class MainWindow : Window
             int port = ParsePort();
 
             _audioStreamer.UseOpusCodec = CodecComboBox.SelectedIndex == 1;
-            _audioStreamer.FrameDurationMs = FrameSizeComboBox.SelectedIndex == 1 ? 10 : 7;
+            _audioStreamer.FrameDurationMs = 10;
             _audioStreamer.VolumeGain = (float)(VolumeSlider.Value / 100.0);
             _audioStreamer.MutePcSpeaker = MutePcCheckBox.IsChecked == true;
 
@@ -158,12 +315,16 @@ public partial class MainWindow : Window
             _audioStreamer.Start(selectedDevice?.Id, port, TargetIpTextBox.Text, port);
 
             StartStopBtn.Content = "STOP STREAMING";
-            StartStopBtn.Background = new SolidColorBrush(Color.FromRgb(220, 38, 38));
+            StartStopBorder.Background = new LinearGradientBrush(
+                System.Windows.Media.Color.FromRgb(220, 38, 38),
+                System.Windows.Media.Color.FromRgb(153, 27, 27),
+                45.0
+            );
             FrameSizeComboBox.IsEnabled = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to start WASAPI audio stream:\n{ex.Message}", "Audio Streamer Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"Failed to start WASAPI audio stream:\n{ex.Message}", "Audio Streamer Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -186,7 +347,7 @@ public partial class MainWindow : Window
             _lastSnapshotTime = now;
 
             string codecName = _audioStreamer.UseOpusCodec ? "Opus 48kHz" : "Raw PCM16 48kHz";
-            TelemetryText.Text = $"Streaming: {codecName} ({_audioStreamer.FrameDurationMs}ms) • {kbps:F1} kbps • Packets: {_audioStreamer.TotalPacketsSent:N0}";
+            TelemetryText.Text = $"Streaming: {codecName} (10ms) • {kbps:F1} kbps • Packets: {_audioStreamer.TotalPacketsSent:N0}";
         }
     }
 
