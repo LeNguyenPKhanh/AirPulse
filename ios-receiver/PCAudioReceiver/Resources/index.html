@@ -915,11 +915,21 @@
 
       /* 3. Initialize liquidGL Lenses */
       let glassInstance = null;
+      let notifiedReady = false;
       const BASE_REFRACTION = 0.014;
       const BASE_BEVEL_WIDTH = 0.125;
 
+      function signalReadyOnce() {
+        if (notifiedReady) return;
+        notifiedReady = true;
+        postToNative({ action: "ready" });
+      }
+
       function initLiquidGL() {
-        if (typeof window.liquidGL !== "function") return;
+        if (typeof window.liquidGL !== "function") {
+          signalReadyOnce();
+          return;
+        }
         try {
           glassInstance = window.liquidGL({
             target: ".glass-card",
@@ -944,9 +954,15 @@
             magnify: 1.06,
             tint: "rgba(18, 20, 30, 0.38)",
             helper: false,
+            on: {
+              init() {
+                signalReadyOnce();
+              },
+            },
           });
         } catch (e) {
           console.warn("liquidGL init fallback:", e);
+          signalReadyOnce();
         }
       }
 
@@ -1078,10 +1094,15 @@
           postToNative({ action: "rescan" });
         });
 
-        // Start/Stop stream button
+        // Start/Stop stream button with 200ms debounce to prevent rapid-tap lockups
+        let lastToggleTap = 0;
         document
           .getElementById("btn-toggle-stream")
           .addEventListener("click", () => {
+            const now = performance.now();
+            if (now - lastToggleTap < 200) return;
+            lastToggleTap = now;
+
             const ip = document.getElementById("input-ip").value.trim();
             const port =
               parseInt(document.getElementById("input-port").value.trim(), 10) ||
@@ -1132,8 +1153,8 @@
           postToNative({ action: "setDuckOthers", value: next });
         });
 
-        // Notify Swift that DOM & liquidGL are ready
-        postToNative({ action: "ready" });
+        // Fallback ready signal if WebGL snapshot takes > 650ms
+        setTimeout(signalReadyOnce, 650);
       });
 
       /* 6. Live State Receiver called from Swift at 25fps */

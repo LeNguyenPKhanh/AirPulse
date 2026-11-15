@@ -541,11 +541,21 @@ public sealed class WasapiAudioStreamer : IDisposable
                     data[0] == AudioPacketProtocol.HandshakeMagic0 &&
                     data[1] == AudioPacketProtocol.HandshakeMagic1)
                 {
+                    var text = data.Length > 2
+                        ? Encoding.UTF8.GetString(data, 2, data.Length - 2).Trim()
+                        : string.Empty;
+
+                    // Explicit stop notification from iPhone ("AH_STOP")
+                    if (text.StartsWith("_STOP", StringComparison.Ordinal))
+                    {
+                        HandleClientDisconnected();
+                        continue;
+                    }
+
                     int clientPort = result.RemoteEndPoint.Port;
                     string deviceLabel = "iPhone";
-                    if (data.Length > 2)
+                    if (!string.IsNullOrEmpty(text))
                     {
-                        var text = Encoding.UTF8.GetString(data, 2, data.Length - 2).Trim();
                         var parts = text.Split('|');
                         if (parts.Length >= 1 && int.TryParse(parts[0], out int parsedPort) && parsedPort > 0)
                         {
@@ -557,13 +567,19 @@ public sealed class WasapiAudioStreamer : IDisposable
                         }
                     }
 
-                    _targetEndpoint = new IPEndPoint(result.RemoteEndPoint.Address, clientPort);
-                    _consecutiveSendErrors = 0;
-                    _needsPrebufferCushion = true;
-                    ConnectedClientInfo = $"Connected: {deviceLabel} ({_targetEndpoint}) • PC Muted";
-                    ClientConnected?.Invoke(ConnectedClientInfo);
+                    var newEndpoint = new IPEndPoint(result.RemoteEndPoint.Address, clientPort);
+                    bool isNewConnection = _targetEndpoint == null || !_targetEndpoint.Equals(newEndpoint);
 
-                    ApplyPcSpeakerMuteState();
+                    _targetEndpoint = newEndpoint;
+                    _consecutiveSendErrors = 0;
+
+                    if (isNewConnection)
+                    {
+                        _needsPrebufferCushion = true;
+                        ConnectedClientInfo = $"Connected: {deviceLabel} ({_targetEndpoint}) • PC Muted";
+                        ClientConnected?.Invoke(ConnectedClientInfo);
+                        ApplyPcSpeakerMuteState();
+                    }
 
                     var ack = Encoding.UTF8.GetBytes($"AH_ACK|{Environment.MachineName}");
                     await _udpSocket.SendAsync(ack, ack.Length, _targetEndpoint);

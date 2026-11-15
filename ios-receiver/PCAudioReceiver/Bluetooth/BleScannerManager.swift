@@ -133,9 +133,13 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
     private func registerEndpoint(_ endpoint: DiscoveredPcEndpoint) {
         DispatchQueue.main.async {
             if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
-                self.discoveredEndpoints[idx] = endpoint
+                // Only update if the PC hostname actually changed, avoiding unnecessary UI rebuilds
+                if self.discoveredEndpoints[idx].name != endpoint.name {
+                    self.discoveredEndpoints[idx] = endpoint
+                }
             } else {
                 self.discoveredEndpoints.append(endpoint)
+                self.bluetoothStateText = "Discovered \(endpoint.name) on Local Network"
             }
         }
     }

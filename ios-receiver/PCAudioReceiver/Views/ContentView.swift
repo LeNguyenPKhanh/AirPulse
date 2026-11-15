@@ -2,6 +2,136 @@ import SwiftUI
 import WebKit
 import UIKit
 
+// MARK: - Apple-Style Launch / Loading Screen Overlay
+
+struct AirPulseLaunchOverlay: View {
+    @State private var pulseRings = false
+    @State private var progressOffset: CGFloat = -90
+
+    var body: some View {
+        ZStack {
+            // Soft Midnight Silk Background matching index.html
+            LinearGradient(
+                colors: [
+                    Color(red: 0.059, green: 0.075, blue: 0.114),
+                    Color(red: 0.090, green: 0.094, blue: 0.161),
+                    Color(red: 0.051, green: 0.063, blue: 0.094)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            // Soft Ambient Coral & Sky Glows
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(red: 1.0, green: 0.53, blue: 0.40).opacity(0.28), .clear],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: 180
+                    )
+                )
+                .frame(width: 340, height: 340)
+                .offset(x: -70, y: -150)
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(red: 0.47, green: 0.78, blue: 1.0).opacity(0.24), .clear],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: 180
+                    )
+                )
+                .frame(width: 340, height: 340)
+                .offset(x: 80, y: 150)
+
+            VStack(spacing: 24) {
+                // Breathing Acoustic Glass Emblem
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .frame(width: 126, height: 126)
+                        .scaleEffect(pulseRings ? 1.18 : 0.92)
+                        .opacity(pulseRings ? 0.0 : 0.75)
+
+                    Circle()
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                        .frame(width: 98, height: 98)
+                        .scaleEffect(pulseRings ? 1.10 : 0.95)
+
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 78, height: 78)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.55),
+                                            Color.white.opacity(0.12)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(color: Color.black.opacity(0.35), radius: 18, x: 0, y: 10)
+
+                    Image(systemName: "waveform.circle.fill")
+                        .font(.system(size: 38, weight: .medium))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.96, green: 0.96, blue: 0.97),
+                                    Color(red: 0.72, green: 0.88, blue: 1.0)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+
+                VStack(spacing: 6) {
+                    Text("AirPulse")
+                        .font(.system(size: 26, weight: .bold, design: .default))
+                        .tracking(-0.5)
+                        .foregroundColor(Color(red: 0.96, green: 0.96, blue: 0.97))
+
+                    Text("Initializing Liquid Glass Engine...")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.52))
+                }
+
+                // Minimalist Apple Capsule Progress Shimmer
+                ZStack {
+                    Capsule()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: 130, height: 4)
+
+                    Capsule()
+                        .fill(Color.white.opacity(0.88))
+                        .frame(width: 48, height: 4)
+                        .offset(x: progressOffset)
+                }
+                .clipShape(Capsule())
+                .frame(width: 130, height: 4)
+                .padding(.top, 6)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                pulseRings = true
+            }
+            withAnimation(.easeInOut(duration: 0.95).repeatForever(autoreverses: true)) {
+                progressOffset = 90
+            }
+        }
+    }
+}
+
 // MARK: - Full-Screen WKWebView Hosting Official naughtyduk/liquidGL Library
 
 struct LiquidGLWebView: UIViewRepresentable {
@@ -10,6 +140,7 @@ struct LiquidGLWebView: UIViewRepresentable {
     @ObservedObject var receiver: UdpAudioEngineReceiver
     @Binding var manualIpAddress: String
     @Binding var manualPortString: String
+    @Binding var isWebLoaded: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -43,19 +174,20 @@ struct LiquidGLWebView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.pushStateToWeb()
     }
 
     final class Coordinator: NSObject, WKScriptMessageHandler {
         var parent: LiquidGLWebView
         weak var webView: WKWebView?
         private var isWebReady = false
+        private var isEvaluatingJs = false
+        private var lastToggleActionTime: TimeInterval = 0
         private var stateTimer: Timer?
 
         init(parent: LiquidGLWebView) {
             self.parent = parent
             super.init()
-            self.stateTimer = Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { [weak self] _ in
+            self.stateTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
                 self?.pushStateToWeb()
             }
         }
@@ -76,21 +208,35 @@ struct LiquidGLWebView: UIViewRepresentable {
                 case "ready":
                     self.isWebReady = true
                     self.pushStateToWeb()
+                    // Smoothly dismiss the Apple launch screen after a brief moment so the snapshot is visible
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
+                            self.parent.isWebLoaded = true
+                        }
+                    }
 
                 case "rescan":
                     UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                     self.parent.bleScanner.startScanning()
 
                 case "connectEndpoint":
+                    let now = CFAbsoluteTimeGetCurrent()
+                    guard now - self.lastToggleActionTime > 0.22 else { return }
+                    self.lastToggleActionTime = now
+
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     if let ip = body["ip"] as? String {
                         let portNum = (body["port"] as? Int) ?? 49152
                         self.parent.manualIpAddress = ip
                         self.parent.manualPortString = String(portNum)
-                        self.parent.receiver.start(pcIpAddress: ip, port: UInt16(portNum))
+                        self.parent.receiver.start(pcIpAddress: ip, port: UInt16(clamping: portNum))
                     }
 
                 case "toggleStream":
+                    let now = CFAbsoluteTimeGetCurrent()
+                    guard now - self.lastToggleActionTime > 0.22 else { return }
+                    self.lastToggleActionTime = now
+
                     UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                     if self.parent.receiver.isRunning {
                         self.parent.receiver.stop()
@@ -127,13 +273,11 @@ struct LiquidGLWebView: UIViewRepresentable {
                 default:
                     break
                 }
-
-                self.pushStateToWeb()
             }
         }
 
         func pushStateToWeb() {
-            guard isWebReady, let webView = webView else { return }
+            guard isWebReady, !isEvaluatingJs, let webView = webView else { return }
 
             let endpointsArray: [[String: Any]] = parent.bleScanner.discoveredEndpoints.map { ep in
                 [
@@ -166,7 +310,10 @@ struct LiquidGLWebView: UIViewRepresentable {
                 return
             }
 
-            webView.evaluateJavaScript("window.updateAppState && window.updateAppState(\(jsonString));", completionHandler: nil)
+            isEvaluatingJs = true
+            webView.evaluateJavaScript("window.updateAppState && window.updateAppState(\(jsonString));") { [weak self] _, _ in
+                self?.isEvaluatingJs = false
+            }
         }
     }
 }
@@ -180,16 +327,26 @@ struct ContentView: View {
 
     @AppStorage("lastPcIpAddress") private var manualIpAddress: String = "192.168.102.5"
     @AppStorage("lastUdpPort") private var manualPortString: String = "49152"
+    @State private var isWebLoaded: Bool = false
 
     var body: some View {
-        LiquidGLWebView(
-            audioSession: audioSession,
-            bleScanner: bleScanner,
-            receiver: receiver,
-            manualIpAddress: $manualIpAddress,
-            manualPortString: $manualPortString
-        )
-        .ignoresSafeArea()
+        ZStack {
+            LiquidGLWebView(
+                audioSession: audioSession,
+                bleScanner: bleScanner,
+                receiver: receiver,
+                manualIpAddress: $manualIpAddress,
+                manualPortString: $manualPortString,
+                isWebLoaded: $isWebLoaded
+            )
+            .ignoresSafeArea()
+
+            if !isWebLoaded {
+                AirPulseLaunchOverlay()
+                    .transition(.opacity.combined(with: .scale(scale: 1.04)))
+                    .zIndex(100)
+            }
+        }
         .preferredColorScheme(.dark)
     }
 }
