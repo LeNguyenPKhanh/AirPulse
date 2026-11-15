@@ -1,0 +1,80 @@
+name: Build iOS Receiver (.ipa) & Windows 11 Sender
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios-ipa:
+    name: Compile Unsigned iOS .ipa (macOS Runner)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+
+      - name: Generate Xcode Project from project.yml
+        working-directory: ios-receiver
+        run: xcodegen generate
+
+      - name: Build Unsigned Release iOS App
+        working-directory: ios-receiver
+        run: |
+          xcodebuild clean build \
+            -project PCAudioReceiver.xcodeproj \
+            -scheme PCAudioReceiver \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package .app into Sideloadly / SideStore .ipa
+        working-directory: ios-receiver
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/PCAudioReceiver.app Payload/
+          zip -r9 PCAudioReceiver-unsigned.ipa Payload
+
+      - name: Upload Unsigned .ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PCAudioReceiver-iOS-IPA
+          path: ios-receiver/PCAudioReceiver-unsigned.ipa
+          retention-days: 30
+
+  build-windows-sender:
+    name: Build Windows 11 Audio Sender (.exe)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Publish Windows 11 Sender
+        working-directory: windows-sender
+        run: |
+          dotnet publish PcAudioStreamer.csproj -c Release -r win-x64 --self-contained false -o publish
+
+      - name: Upload Windows 11 Sender Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PcAudioStreamer-Windows11
+          path: windows-sender/publish/
+          retention-days: 30
