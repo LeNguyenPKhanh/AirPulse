@@ -10,7 +10,7 @@ on:
 jobs:
   build-ios-ipa:
     name: Compile Unsigned iOS .ipa (macOS Runner)
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Repository
