@@ -2,14 +2,14 @@ name: PCAudioReceiver
 options:
   bundleIdPrefix: com.antigravity.pcaudiostreamer
   deploymentTarget:
-    iOS: "15.0"
-  xcodeVersion: "15.0"
+    iOS: "26.0"
+  xcodeVersion: "16.0"
 
 targets:
   PCAudioReceiver:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "26.0"
     sources:
       - path: PCAudioReceiver
         excludes:
@@ -47,3 +47,4 @@ targets:
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
         ENABLE_BITCODE: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
