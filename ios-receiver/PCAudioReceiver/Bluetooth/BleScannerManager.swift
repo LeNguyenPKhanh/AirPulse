@@ -153,9 +153,18 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
                 $0.name.caseInsensitiveCompare(endpoint.name) == .orderedSame && $0.port == endpoint.port
             }
 
+            let prevEffective = self.discoveredEndpoints.first(where: keyMatches)
+
             if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
-                // Same IP:port seen again
-                self.discoveredEndpoints[idx] = endpoint
+                // Same IP:port seen again: keep best source/name to avoid Wi-Fi Beacon/UDP Probe flicker
+                let existing = self.discoveredEndpoints[idx]
+                if score(endpoint) >= score(existing) {
+                    self.discoveredEndpoints[idx] = endpoint
+                } else if existing.name != endpoint.name && !endpoint.name.isEmpty {
+                    self.discoveredEndpoints[idx] = DiscoveredPcEndpoint(
+                        name: endpoint.name, ipAddress: existing.ipAddress, port: existing.port, source: existing.source
+                    )
+                }
             } else if let idx = self.discoveredEndpoints.firstIndex(where: keyMatches) {
                 // Same PC, different interface/IP: keep only the most stable/reliable one
                 let existing = self.discoveredEndpoints[idx]
@@ -163,7 +172,6 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
                     self.lastSeenTimestamps.removeValue(forKey: existing.id)
                     self.discoveredEndpoints[idx] = endpoint
                 } else {
-                    // Drop noisier/less stable duplicate; keep existing
                     self.lastSeenTimestamps.removeValue(forKey: endpoint.id)
                 }
             } else {
@@ -173,9 +181,10 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
 
             self.collapseEndpointsForSamePc()
 
-            // Notify only with the chosen endpoint for this PC to avoid UI/IP flicker
-            let effective = self.discoveredEndpoints.first(where: keyMatches) ?? endpoint
-            self.onEndpointSeen?(effective)
+            let effective = self.discoveredEndpoints.first(where: keyMatches) ?? prevEffective ?? endpoint
+            if effective != prevEffective {
+                self.onEndpointSeen?(effective)
+            }
         }
     }
 
