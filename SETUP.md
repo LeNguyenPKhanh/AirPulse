@@ -11,24 +11,12 @@ Step-by-step setup for streaming audio from a Windows PC to an iPhone with AirPu
 
 ## 2) Prepare the PC (Windows Sender)
 
-1. Download/clone this repo and open its folder.
-2. **Open firewall ports once** (required for discovery/streaming):
-   - Right-click Start → **Windows Terminal (Admin)** / **PowerShell (Admin)**
-   - Run:
-     ```powershell
-     cd path\to\AirPulse
-     .\open-firewall-ports.ps1
-     ```
-   - This allows inbound UDP **49152** and **49153**.
-3. **Start the sender app** (choose one):
-   - Prebuilt (if present): run `windows-sender\publish\PcAudioStreamer.exe`
-   - From source (needs [.NET 9 SDK](https://dotnet.microsoft.com/download)):
-     ```powershell
-     dotnet run --project .\windows-sender\PcAudioStreamer.csproj -c Release
-     ```
-4. In the sender app, select the audio device (WASAPI loopback/output to capture) and click **Start/Stream**. Keep it running.
+**Easiest:** download **`AirPulse-PC.exe`** from this repo and run it (no install/.NET required). On first run it auto-configures Windows Firewall for UDP **49152/49153** (may prompt for Administrator/UAC once) and starts discovery/streaming automatically.
 
-> Tip: `.\setup-windows.ps1` (run as Admin) can open firewall ports and launch the prebuilt sender if available.
+**Manual/source option (if you prefer):**
+1. Open firewall ports once as Administrator: `.\open-firewall-ports.ps1`
+2. Run prebuilt: `windows-sender\publish\PcAudioStreamer.exe` (if present), or from source: `dotnet run --project .\windows-sender\PcAudioStreamer.csproj -c Release`
+3. In the sender app, select the audio device (WASAPI loopback/output to capture) and click **Start/Stream** if needed. Keep it running.
 
 ## 3) Install the app on iPhone (sideload)
 

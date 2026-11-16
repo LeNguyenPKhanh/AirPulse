@@ -54,28 +54,12 @@ cd AirPulse
 
 ### B. Configure and run the Windows Sender (PC)
 
-1. **Open UDP ports (one-time, run PowerShell as Administrator):**
-   ```powershell
-   .\open-firewall-ports.ps1
-   ```
-   This allows inbound UDP **49152** and **49153** (Private/Domain profiles).
-
-2. **Run the sender:**
-   - Use the prebuilt executable (if present in the repo):
-     ```powershell
-     .\windows-sender\publish\PcAudioStreamer.exe
-     ```
-   - Or run from source:
-     ```powershell
-     dotnet run --project .\windows-sender\PcAudioStreamer.csproj -c Release
-     ```
-   - Or publish a self-contained build (same approach as CI):
-     ```powershell
-     dotnet publish .\windows-sender\PcAudioStreamer.csproj -c Release -r win-x64 --self-contained true -o .\windows-sender\publish
-     .\windows-sender\publish\PcAudioStreamer.exe
-     ```
-
-3. In the Windows app, select the audio output device (WASAPI loopback) and press **Start/Stream**. Make sure the PC and iPhone are on the same network.
+1. **Easiest (recommended):** download and run **`AirPulse-PC.exe`** from this repo (self-contained, no .NET install needed). On first run it will auto-configure Windows Firewall for UDP 49152-49153 (may ask for Administrator/UAC once), then start streaming/discovery automatically.
+2. **If you prefer manual/source setup:**
+   - Open ports once (PowerShell as Administrator): `.\open-firewall-ports.ps1`
+   - Run from source: `dotnet run --project .\windows-sender\PcAudioStreamer.csproj -c Release`
+   - Or publish self-contained: `dotnet publish .\windows-sender\PcAudioStreamer.csproj -c Release -r win-x64 --self-contained true -o .\windows-sender\publish`
+3. In the Windows app, select the audio output device (WASAPI loopback) and press **Start/Stream** if needed. Keep PC and iPhone on the same network.
 
 ### C. Install the iOS Receiver on iPhone
 
