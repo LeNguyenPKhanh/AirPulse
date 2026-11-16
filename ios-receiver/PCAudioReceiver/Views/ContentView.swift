@@ -10,7 +10,6 @@ struct AirPulseLaunchOverlay: View {
 
     var body: some View {
         ZStack {
-            // Soft Midnight Silk Background matching index.html
             LinearGradient(
                 colors: [
                     Color(red: 0.059, green: 0.075, blue: 0.114),
@@ -22,7 +21,6 @@ struct AirPulseLaunchOverlay: View {
             )
             .ignoresSafeArea()
 
-            // Soft Ambient Coral & Sky Glows
             Circle()
                 .fill(
                     RadialGradient(
@@ -48,7 +46,6 @@ struct AirPulseLaunchOverlay: View {
                 .offset(x: 80, y: 150)
 
             VStack(spacing: 24) {
-                // Breathing Acoustic Glass Emblem
                 ZStack {
                     Circle()
                         .stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -105,7 +102,6 @@ struct AirPulseLaunchOverlay: View {
                         .foregroundColor(Color.white.opacity(0.52))
                 }
 
-                // Minimalist Apple Capsule Progress Shimmer
                 ZStack {
                     Capsule()
                         .fill(Color.white.opacity(0.12))
@@ -188,6 +184,26 @@ struct LiquidGLWebView: UIViewRepresentable {
         init(parent: LiquidGLWebView) {
             self.parent = parent
             super.init()
+
+            // Wire mutual discovery & reachability between BleScannerManager and UdpAudioEngineReceiver
+            parent.bleScanner.onEndpointSeen = { [weak self] ep in
+                guard let self = self else { return }
+                self.parent.receiver.notifyEndpointSeen(ip: ep.ipAddress, port: ep.port, name: ep.name)
+                DispatchQueue.main.async {
+                    if self.parent.manualIpAddress.isEmpty || !self.parent.receiver.isRunning {
+                        self.parent.manualIpAddress = ep.ipAddress
+                        self.parent.manualPortString = String(ep.port)
+                    }
+                }
+            }
+
+            parent.receiver.onPcEndpointVerified = { [weak self] ip, port, name in
+                guard let self = self else { return }
+                self.parent.bleScanner.registerEndpoint(
+                    DiscoveredPcEndpoint(name: name, ipAddress: ip, port: port, source: "UDP Probe")
+                )
+            }
+
             self.stateTimer = Timer.scheduledTimer(withTimeInterval: 0.10, repeats: true) { [weak self] _ in
                 self?.pushStateToWeb()
             }
@@ -217,6 +233,7 @@ struct LiquidGLWebView: UIViewRepresentable {
 
         @objc private func appDidBecomeActive() {
             isAppInForeground = true
+            parent.receiver.triggerActiveLanProbe()
             pushStateToWeb()
         }
 
@@ -231,8 +248,8 @@ struct LiquidGLWebView: UIViewRepresentable {
                 switch action {
                 case "ready":
                     self.isWebReady = true
+                    self.parent.receiver.triggerActiveLanProbe()
                     self.pushStateToWeb()
-                    // Smoothly dismiss the Apple launch screen after a brief moment so the snapshot is visible
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
                             self.parent.isWebLoaded = true
@@ -242,6 +259,15 @@ struct LiquidGLWebView: UIViewRepresentable {
                 case "rescan":
                     UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                     self.parent.bleScanner.startScanning()
+                    self.parent.receiver.triggerActiveLanProbe()
+
+                case "updateTargetEndpoint":
+                    if let ip = body["ip"] as? String {
+                        let portNum = (body["port"] as? Int) ?? 49152
+                        self.parent.manualIpAddress = ip
+                        self.parent.manualPortString = String(portNum)
+                        self.parent.receiver.updateManualTarget(ip: ip, port: UInt16(clamping: portNum))
+                    }
 
                 case "connectEndpoint":
                     let now = CFAbsoluteTimeGetCurrent()
@@ -253,6 +279,11 @@ struct LiquidGLWebView: UIViewRepresentable {
                         let portNum = (body["port"] as? Int) ?? 49152
                         self.parent.manualIpAddress = ip
                         self.parent.manualPortString = String(portNum)
+                        self.parent.receiver.notifyEndpointSeen(
+                            ip: ip,
+                            port: UInt16(clamping: portNum),
+                            name: (body["name"] as? String) ?? "Windows PC"
+                        )
                         self.parent.receiver.start(pcIpAddress: ip, port: UInt16(clamping: portNum))
                     }
 
@@ -261,10 +292,16 @@ struct LiquidGLWebView: UIViewRepresentable {
                     guard now - self.lastToggleActionTime > 0.22 else { return }
                     self.lastToggleActionTime = now
 
-                    UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                     if self.parent.receiver.isRunning {
+                        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                         self.parent.receiver.stop()
                     } else {
+                        guard self.parent.receiver.isPcReachable else {
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            self.parent.receiver.triggerActiveLanProbe()
+                            return
+                        }
+                        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                         let ip = (body["ip"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? self.parent.manualIpAddress
                         let portNum = (body["port"] as? Int) ?? Int(self.parent.manualPortString) ?? 49152
                         self.parent.manualIpAddress = ip
@@ -314,6 +351,10 @@ struct LiquidGLWebView: UIViewRepresentable {
 
             let stateDict: [String: Any] = [
                 "isRunning": parent.receiver.isRunning,
+                "isPcReachable": parent.receiver.isPcReachable,
+                "reachablePcName": parent.receiver.reachablePcName,
+                "currentTargetIp": parent.receiver.currentTargetIp,
+                "currentTargetPort": Int(parent.receiver.currentTargetPort),
                 "connectionStatus": parent.receiver.connectionStatus,
                 "activeCodecName": parent.receiver.activeCodecName,
                 "routeDescription": parent.audioSession.currentRouteDescription,
@@ -349,7 +390,7 @@ struct ContentView: View {
     @StateObject private var bleScanner = BleScannerManager()
     @StateObject private var receiver = UdpAudioEngineReceiver()
 
-    @AppStorage("lastPcIpAddress") private var manualIpAddress: String = "192.168.102.5"
+    @AppStorage("lastPcIpAddress") private var manualIpAddress: String = ""
     @AppStorage("lastUdpPort") private var manualPortString: String = "49152"
     @State private var isWebLoaded: Bool = false
 

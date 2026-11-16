@@ -5,11 +5,16 @@ import Darwin
 
 /// Ultra-low-jitter UDP audio receiver using a Lock-Free Circular Ring Buffer and
 /// CoreAudio's real-time `AVAudioSourceNode` render callback.
-/// Eliminates per-packet heap allocations, `scheduleBuffer` completion queue delays when
-/// switching iOS apps (e.g. opening Settings), and periodic clock-drift skips.
+/// Also performs continuous lightweight UDP reachability probing (`AH_PING` / `AH_PONG`)
+/// so the Audio Stream button is only enabled when a PC is genuinely reachable,
+/// and automatically hides Dynamic Island after a few seconds of audio inactivity.
 final class UdpAudioEngineReceiver: ObservableObject {
     @Published private(set) var isRunning: Bool = false
-    @Published private(set) var connectionStatus: String = "Ready to Connect"
+    @Published private(set) var isPcReachable: Bool = false
+    @Published private(set) var reachablePcName: String = ""
+    @Published private(set) var currentTargetIp: String = UserDefaults.standard.string(forKey: "lastPcIpAddress") ?? ""
+    @Published private(set) var currentTargetPort: UInt16 = 49152
+    @Published private(set) var connectionStatus: String = "Waiting for PC..."
     @Published private(set) var activeCodecName: String = "PCM 48kHz"
     @Published private(set) var packetsReceived: UInt64 = 0
     @Published private(set) var packetsDropped: UInt64 = 0
@@ -18,6 +23,8 @@ final class UdpAudioEngineReceiver: ObservableObject {
 
     @Published var volumeGain: Float = 1.0
     @Published var targetBufferMs: Double = 45.0 // 45ms default cushion prevents Wi-Fi & app-switch stutters
+
+    var onPcEndpointVerified: ((String, UInt16, String) -> Void)?
 
     private let audioEngine = AVAudioEngine()
     private var sourceNode: AVAudioSourceNode!
@@ -46,9 +53,14 @@ final class UdpAudioEngineReceiver: ObservableObject {
 
     private var lastSequenceNumber: UInt16?
     private var lastAudioPacketTime: TimeInterval = 0
+    private var lastAudiblePacketTime: TimeInterval = 0
     private var lastHandshakeSentTime: TimeInterval = 0
-    private var pairedPcName: String = "Windows 11 PC"
-    private var activePcIp: String = UserDefaults.standard.string(forKey: "lastPcIpAddress") ?? "192.168.102.5"
+    private var lastPingSentTime: TimeInterval = 0
+    private var lastPcContactTime: TimeInterval = 0
+    private var isDynamicIslandActive: Bool = false
+
+    private var pairedPcName: String = "Windows PC"
+    private var activePcIp: String = UserDefaults.standard.string(forKey: "lastPcIpAddress") ?? ""
     private var activePcPort: UInt16 = 49152
 
     init() {
@@ -63,7 +75,12 @@ final class UdpAudioEngineReceiver: ObservableObject {
         bindRemoteMediaCommands()
 
         AudioSessionManager.shared.onInterruptionEnded = { [weak self] in
-            self?.ensureEngineRunning()
+            guard let self = self, self.isRunning else { return }
+            self.ensureEngineRunning()
+        }
+
+        AudioSessionManager.shared.onInactivitySessionDeactivated = { [weak self] in
+            self?.pauseEngineIfIdle()
         }
     }
 
@@ -100,12 +117,97 @@ final class UdpAudioEngineReceiver: ObservableObject {
     func resumeFromRemote() {
         stateLock.lock()
         let ip = activePcIp.isEmpty
-            ? (UserDefaults.standard.string(forKey: "lastPcIpAddress") ?? "192.168.102.5")
+            ? (UserDefaults.standard.string(forKey: "lastPcIpAddress") ?? "")
             : activePcIp
+        let port = activePcPort
+        let canConnect = isPcReachable || (CFAbsoluteTimeGetCurrent() - lastPcContactTime) <= 5.0
+        stateLock.unlock()
+
+        guard canConnect, !ip.isEmpty else { return }
+        start(pcIpAddress: ip, port: port)
+    }
+
+    // MARK: - PC Reachability & Auto-Discovery Sync
+
+    func notifyEndpointSeen(ip: String, port: UInt16, name: String) {
+        let cleanIp = ip.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanIp.isEmpty else { return }
+
+        let now = CFAbsoluteTimeGetCurrent()
+        stateLock.lock()
+        lastPcContactTime = now
+        pairedPcName = name
+        if activePcIp.isEmpty || (!isRunning && !isPcReachable) {
+            activePcIp = cleanIp
+            activePcPort = port
+            UserDefaults.standard.set(cleanIp, forKey: "lastPcIpAddress")
+        }
+        let currentIp = activePcIp
+        let currentPort = activePcPort
+        let running = isRunning
+        stateLock.unlock()
+
+        DispatchQueue.main.async {
+            self.isPcReachable = true
+            self.reachablePcName = name
+            if self.currentTargetIp != currentIp {
+                self.currentTargetIp = currentIp
+            }
+            if self.currentTargetPort != currentPort {
+                self.currentTargetPort = currentPort
+            }
+            if !running {
+                self.connectionStatus = "Ready • \(name)"
+            }
+        }
+    }
+
+    func updateManualTarget(ip: String, port: UInt16) {
+        let cleanIp = ip.trimmingCharacters(in: .whitespacesAndNewlines)
+        stateLock.lock()
+        let ipChanged = activePcIp != cleanIp || activePcPort != port
+        activePcIp = cleanIp
+        activePcPort = port
+        if ipChanged && !isRunning {
+            lastPcContactTime = 0
+        }
+        let fd = persistentSocketFd
+        stateLock.unlock()
+
+        if !cleanIp.isEmpty {
+            UserDefaults.standard.set(cleanIp, forKey: "lastPcIpAddress")
+        }
+
+        DispatchQueue.main.async {
+            self.currentTargetIp = cleanIp
+            self.currentTargetPort = port
+            if ipChanged && !self.isRunning {
+                self.isPcReachable = false
+                self.connectionStatus = cleanIp.isEmpty ? "Waiting for PC..." : "Checking \(cleanIp)..."
+            }
+        }
+
+        if fd >= 0 && !cleanIp.isEmpty {
+            sendDatagram(fd: fd, payload: "AH_PING|\(boundPort)|\(UIDevice.current.name)", toIp: cleanIp, port: port)
+        }
+    }
+
+    func triggerActiveLanProbe() {
+        stateLock.lock()
+        let fd = persistentSocketFd
+        let ip = activePcIp
         let port = activePcPort
         stateLock.unlock()
 
-        start(pcIpAddress: ip, port: port)
+        guard fd >= 0 else { return }
+        let pingPayload = "AH_PING|\(boundPort)|\(UIDevice.current.name)"
+        if !ip.isEmpty {
+            sendDatagram(fd: fd, payload: pingPayload, toIp: ip, port: port)
+        }
+        for bcast in Self.getLocalBroadcastAddresses() {
+            sendDatagram(fd: fd, payload: pingPayload, toIp: bcast, port: port)
+        }
+        sendDatagram(fd: fd, payload: pingPayload, toIp: "255.255.255.255", port: port)
     }
 
     // MARK: - CoreAudio Real-Time AVAudioSourceNode Setup
@@ -181,7 +283,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
             }
 
             // Smooth fractional clock-drift catch-up (no sudden 10ms packet drops!)
-            // If buffer exceeds targetFrames + 35ms (1680 frames), smoothly advance 1 extra frame every 192 samples (~0.5% pitch-imperceptible)
             let shouldSlip = available > (targetFrames + 1680)
             let gain = self.volumeGain
 
@@ -215,7 +316,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
         audioEngine.attach(sourceNode)
         audioEngine.connect(sourceNode, to: audioEngine.mainMixerNode, format: format)
         audioEngine.prepare()
-        ensureEngineRunning()
     }
 
     private func ensureEngineRunning() {
@@ -232,6 +332,19 @@ final class UdpAudioEngineReceiver: ObservableObject {
         }
     }
 
+    private func pauseEngineIfIdle() {
+        stateLock.lock()
+        let active = isRunning
+        stateLock.unlock()
+        guard !active else { return }
+
+        audioLock.lock()
+        defer { audioLock.unlock() }
+        if audioEngine.isRunning {
+            audioEngine.pause()
+        }
+    }
+
     // MARK: - Persistent UDP Socket with High-Priority Receive Thread
 
     private func setupPersistentSocket(port: UInt16) {
@@ -241,6 +354,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
         var reuse: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
         setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuse, socklen_t(MemoryLayout<Int32>.size))
+        setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &reuse, socklen_t(MemoryLayout<Int32>.size))
 
         var rcvBufSize: Int32 = 524288 // 512 KB kernel UDP receive buffer
         setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvBufSize, socklen_t(MemoryLayout<Int32>.size))
@@ -268,7 +382,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
         persistentSocketFd = fd
         boundPort = port
 
-        // Dedicated high-priority Thread so GCD thread-pool starvation during app switches never delays UDP reads
         let thread = Thread { [weak self] in
             pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
             self?.persistentReceiveLoop(fd: fd)
@@ -278,36 +391,53 @@ final class UdpAudioEngineReceiver: ObservableObject {
         thread.start()
     }
 
-    // MARK: - Instant Start & Stop
+    // MARK: - Instant Start & Stop (Guarded by PC Reachability)
 
     func start(pcIpAddress: String, port: UInt16 = 49152) {
         let cleanIp = pcIpAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanIp.isEmpty else { return }
+        let now = CFAbsoluteTimeGetCurrent()
 
+        stateLock.lock()
+        let targetIp = cleanIp.isEmpty ? activePcIp : cleanIp
+        let canConnect = isPcReachable || (lastPcContactTime > 0 && (now - lastPcContactTime) <= 4.0)
+        let fd = persistentSocketFd
+        stateLock.unlock()
+
+        // Do NOT allow starting audio stream if no PC is connected/reachable yet
+        guard !targetIp.isEmpty, canConnect else {
+            if fd >= 0 && !targetIp.isEmpty {
+                sendDatagram(fd: fd, payload: "AH_PING|\(boundPort)|\(UIDevice.current.name)", toIp: targetIp, port: port)
+            }
+            return
+        }
+
+        UserDefaults.standard.set(targetIp, forKey: "lastPcIpAddress")
         ensureEngineRunning()
 
-        let now = CFAbsoluteTimeGetCurrent()
         stateLock.lock()
         sessionGeneration &+= 1
         let gen = sessionGeneration
         isPrimed = false
         readIndex = writeIndex
         isRunning = true
-        activePcIp = cleanIp
+        activePcIp = targetIp
         activePcPort = port
         lastSequenceNumber = nil
-        lastAudioPacketTime = 0
+        lastAudioPacketTime = now
+        lastAudiblePacketTime = now
         lastHandshakeSentTime = now
-        let fd = persistentSocketFd
+        isDynamicIslandActive = true
         let pcName = pairedPcName
         stateLock.unlock()
 
         DispatchQueue.main.async {
+            self.currentTargetIp = targetIp
+            self.currentTargetPort = port
             self.packetsReceived = 0
             self.packetsDropped = 0
             self.estimatedBufferMs = 0.0
             self.outputPeakLevel = 0.0
-            self.connectionStatus = "Connecting to \(cleanIp)..."
+            self.connectionStatus = "Connecting to \(pcName)..."
             AudioSessionManager.shared.updateNowPlayingInfo(
                 isStreaming: true,
                 pcName: pcName,
@@ -316,7 +446,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
         }
 
         let hsPayload = "AH\(boundPort)|\(UIDevice.current.name)"
-        sendDatagram(fd: fd, payload: hsPayload, toIp: cleanIp, port: port)
+        sendDatagram(fd: fd, payload: hsPayload, toIp: targetIp, port: port)
 
         DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + .milliseconds(120)) { [weak self] in
             guard let self = self else { return }
@@ -324,7 +454,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
             let stillActive = self.isRunning && self.sessionGeneration == gen
             self.stateLock.unlock()
             if stillActive {
-                self.sendDatagram(fd: fd, payload: hsPayload, toIp: cleanIp, port: port)
+                self.sendDatagram(fd: fd, payload: hsPayload, toIp: targetIp, port: port)
             }
         }
 
@@ -334,26 +464,35 @@ final class UdpAudioEngineReceiver: ObservableObject {
             let stillActive = self.isRunning && self.sessionGeneration == gen
             self.stateLock.unlock()
             if stillActive {
-                self.sendDatagram(fd: fd, payload: hsPayload, toIp: cleanIp, port: port)
+                self.sendDatagram(fd: fd, payload: hsPayload, toIp: targetIp, port: port)
             }
         }
     }
 
-    func stop() {
+    func stop(disconnected: Bool = false) {
         stateLock.lock()
         sessionGeneration &+= 1
         let gen = sessionGeneration
         isRunning = false
         isPrimed = false
+        isDynamicIslandActive = false
         readIndex = writeIndex
         let fd = persistentSocketFd
         let ip = activePcIp
         let port = activePcPort
         let pcName = pairedPcName
+        if disconnected {
+            lastPcContactTime = 0
+        }
         stateLock.unlock()
 
         DispatchQueue.main.async {
-            self.connectionStatus = "Ready to Connect"
+            if disconnected {
+                self.isPcReachable = false
+                self.connectionStatus = "Waiting for PC..."
+            } else {
+                self.connectionStatus = self.isPcReachable ? "Ready • \(pcName)" : "Waiting for PC..."
+            }
             self.estimatedBufferMs = 0.0
             self.outputPeakLevel = 0.0
             AudioSessionManager.shared.updateNowPlayingInfo(
@@ -384,7 +523,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
         targetAddr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         targetAddr.sin_family = sa_family_t(AF_INET)
         targetAddr.sin_port = port.bigEndian
-        inet_pton(AF_INET, ip, &targetAddr.sin_addr)
+        guard inet_pton(AF_INET, ip, &targetAddr.sin_addr) == 1 else { return }
 
         data.withUnsafeBytes { rawBytes in
             guard let base = rawBytes.baseAddress else { return }
@@ -396,15 +535,13 @@ final class UdpAudioEngineReceiver: ObservableObject {
         }
     }
 
-    // MARK: - Automatic Re-Handshake Heartbeat
+    // MARK: - Automatic Reachability Probe, Re-Handshake & Dynamic Island Silence Monitor
 
     private func startPersistentHeartbeatTimer() {
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInteractive))
         timer.schedule(deadline: .now() + .milliseconds(200), repeating: .milliseconds(200))
         timer.setEventHandler { [weak self] in
             guard let self = self, !self.isDestroyed else { return }
-
-            self.ensureEngineRunning()
 
             let now = CFAbsoluteTimeGetCurrent()
             self.stateLock.lock()
@@ -413,11 +550,69 @@ final class UdpAudioEngineReceiver: ObservableObject {
             let ip = self.activePcIp
             let port = self.activePcPort
             let lastAudio = self.lastAudioPacketTime
+            let lastAudible = self.lastAudiblePacketTime
             let lastHs = self.lastHandshakeSentTime
+            let lastPing = self.lastPingSentTime
+            let lastContact = self.lastPcContactTime
+            let islandActive = self.isDynamicIslandActive
             self.stateLock.unlock()
 
-            let silenceElapsed = now - lastAudio
+            if active {
+                self.ensureEngineRunning()
+            }
 
+            // 1. Check if PC went offline / unreachable (> 3.4s without any packet or pong)
+            if lastContact > 0 && (now - lastContact) > 3.4 {
+                if active && (now - lastAudio) > 3.4 {
+                    self.stop(disconnected: true)
+                    return
+                } else if !active {
+                    self.stateLock.lock()
+                    self.lastPcContactTime = 0
+                    self.stateLock.unlock()
+                    DispatchQueue.main.async {
+                        if self.isPcReachable {
+                            self.isPcReachable = false
+                            if !self.isRunning {
+                                self.connectionStatus = "Waiting for PC..."
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Auto-hide Dynamic Island after 4.5s of audio silence while streaming
+            if active && islandActive && lastAudible > 0 && (now - lastAudible) >= 4.5 {
+                self.stateLock.lock()
+                self.isDynamicIslandActive = false
+                self.stateLock.unlock()
+                AudioSessionManager.shared.hideNowPlayingForSilence()
+                DispatchQueue.main.async {
+                    self.outputPeakLevel = 0.0
+                }
+            }
+
+            // 3. Periodic reachability probe (`AH_PING`) when idle or searching so any PC on any LAN is found
+            if !active && fd >= 0 && (now - lastPing) >= 0.90 {
+                self.stateLock.lock()
+                self.lastPingSentTime = now
+                self.stateLock.unlock()
+
+                let pingPayload = "AH_PING|\(self.boundPort)|\(UIDevice.current.name)"
+                if !ip.isEmpty {
+                    self.sendDatagram(fd: fd, payload: pingPayload, toIp: ip, port: port)
+                }
+                // Also broadcast probe on local subnet if PC is not currently reachable
+                if lastContact == 0 || (now - lastContact) > 2.0 {
+                    for bcast in Self.getLocalBroadcastAddresses() {
+                        self.sendDatagram(fd: fd, payload: pingPayload, toIp: bcast, port: port)
+                    }
+                    self.sendDatagram(fd: fd, payload: pingPayload, toIp: "255.255.255.255", port: port)
+                }
+            }
+
+            // 4. Re-handshake if streaming and audio packets paused briefly
+            let silenceElapsed = now - lastAudio
             if active && fd >= 0 && !ip.isEmpty && silenceElapsed > 0.60 && (now - lastHs) >= 0.60 {
                 self.stateLock.lock()
                 self.lastHandshakeSentTime = now
@@ -436,7 +631,15 @@ final class UdpAudioEngineReceiver: ObservableObject {
         let normScale: Float = 1.0 / 32768.0
 
         while !isDestroyed {
-            let bytesRead = recv(fd, &packetBuf, packetBuf.count, 0)
+            var senderAddr = sockaddr_in()
+            var senderLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+
+            let bytesRead = withUnsafeMutablePointer(to: &senderAddr) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { addrPtr in
+                    recvfrom(fd, &packetBuf, packetBuf.count, 0, addrPtr, &senderLen)
+                }
+            }
+
             if bytesRead <= 0 {
                 let err = errno
                 if err == EAGAIN || err == EWOULDBLOCK || err == EINTR {
@@ -447,39 +650,70 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 continue
             }
 
-            stateLock.lock()
-            let active = isRunning
-            let gen = sessionGeneration
-            stateLock.unlock()
+            let now = CFAbsoluteTimeGetCurrent()
 
-            if !active {
+            // Extract sender IPv4 string
+            var ipCString = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+            var addrCopy = senderAddr.sin_addr
+            inet_ntop(AF_INET, &addrCopy, &ipCString, socklen_t(INET_ADDRSTRLEN))
+            let senderIp = String(cString: ipCString)
+            let senderPort = UInt16(bigEndian: senderAddr.sin_port)
+
+            // 1. Control Packets ("AH_PONG|..." or "AH_ACK|...")
+            if bytesRead >= 6 && packetBuf[0] == 0x41 && packetBuf[1] == 0x48 {
+                if let text = String(bytes: packetBuf[0..<bytesRead], encoding: .utf8) {
+                    if text.hasPrefix("AH_PONG|") {
+                        let parts = text.split(separator: "|")
+                        let pcName = parts.count >= 2 ? String(parts.last!) : "Windows PC"
+                        let resolvedIp = senderIp.isEmpty ? activePcIp : senderIp
+                        let resolvedPort = senderPort > 0 ? senderPort : activePcPort
+
+                        notifyEndpointSeen(ip: resolvedIp, port: resolvedPort, name: pcName)
+                        onPcEndpointVerified?(resolvedIp, resolvedPort, pcName)
+                        continue
+                    } else if text.hasPrefix("AH_ACK|") {
+                        let pcName = text.replacingOccurrences(of: "AH_ACK|", with: "")
+                        let resolvedIp = senderIp.isEmpty ? activePcIp : senderIp
+                        let resolvedPort = senderPort > 0 ? senderPort : activePcPort
+
+                        stateLock.lock()
+                        self.lastPcContactTime = now
+                        self.pairedPcName = pcName
+                        let active = self.isRunning
+                        let gen = self.sessionGeneration
+                        let hasAudio = self.lastAudioPacketTime > 0
+                        stateLock.unlock()
+
+                        onPcEndpointVerified?(resolvedIp, resolvedPort, pcName)
+
+                        DispatchQueue.main.async {
+                            self.isPcReachable = true
+                            self.reachablePcName = pcName
+                            guard active, self.isRunning, self.sessionGeneration == gen else { return }
+                            self.connectionStatus = hasAudio
+                                ? "Streaming • \(pcName)"
+                                : "Connected • \(pcName)"
+                            AudioSessionManager.shared.updateNowPlayingInfo(
+                                isStreaming: true,
+                                pcName: pcName,
+                                codec: self.activeCodecName
+                            )
+                        }
+                        continue
+                    }
+                }
                 continue
             }
 
-            let now = CFAbsoluteTimeGetCurrent()
+            stateLock.lock()
+            let active = isRunning
+            let gen = sessionGeneration
+            if !senderIp.isEmpty {
+                self.lastPcContactTime = now
+            }
+            stateLock.unlock()
 
-            // 1. Handshake ACK ("AH_ACK|PC_NAME")
-            if bytesRead >= 6 && packetBuf[0] == 0x41 && packetBuf[1] == 0x48 {
-                if let text = String(bytes: packetBuf[0..<bytesRead], encoding: .utf8),
-                   text.hasPrefix("AH_ACK|") {
-                    let pcName = text.replacingOccurrences(of: "AH_ACK|", with: "")
-                    stateLock.lock()
-                    self.pairedPcName = pcName
-                    let hasAudio = self.lastAudioPacketTime > 0
-                    stateLock.unlock()
-
-                    DispatchQueue.main.async {
-                        guard self.isRunning, self.sessionGeneration == gen else { return }
-                        self.connectionStatus = hasAudio
-                            ? "Streaming • \(pcName)"
-                            : "Connected • \(pcName)"
-                        AudioSessionManager.shared.updateNowPlayingInfo(
-                            isStreaming: true,
-                            pcName: pcName,
-                            codec: self.activeCodecName
-                        )
-                    }
-                }
+            if !active {
                 continue
             }
 
@@ -499,22 +733,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 continue
             }
 
-            stateLock.lock()
-            self.lastAudioPacketTime = now
-            var droppedThisStep: UInt64 = 0
-            if let prevSeq = self.lastSequenceNumber {
-                let expected = prevSeq &+ 1
-                if seq != expected {
-                    let diff = seq &- expected
-                    if diff < 1000 {
-                        droppedThisStep = UInt64(diff)
-                    }
-                }
-            }
-            self.lastSequenceNumber = seq
-            let pcName = self.pairedPcName
-            stateLock.unlock()
-
             let isOpus = (codecByte & 0x02) != 0
             let isSilentKeepAlive = (flags & 0x04) != 0
             var peak: Float = 0.0
@@ -531,7 +749,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 }
                 self.writeIndex = w
             } else if !isOpus {
-                // Fast zero-allocation PCM16 stereo decode directly into lock-free ring buffer
                 let totalShorts = payloadLen / 2
                 let frameCount = totalShorts / 2
                 framesWritten = frameCount
@@ -554,7 +771,6 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 }
                 self.writeIndex = w
             } else {
-                // Opus fallback decode into ring buffer
                 let payloadData = Data(packetBuf[12..<(12 + payloadLen)])
                 if let validBuffer = decoder.decodeOpus(payload: payloadData, expectedFrames: 480, volumeGain: 1.0),
                    let ch0 = validBuffer.floatChannelData?[0],
@@ -577,20 +793,56 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 }
             }
 
+            let isAudibleFrame = !isSilentKeepAlive && peak > 0.0008
+
+            stateLock.lock()
+            self.lastAudioPacketTime = now
+            self.lastPcContactTime = now
+            var shouldWakeDynamicIsland = false
+            if isAudibleFrame {
+                self.lastAudiblePacketTime = now
+                if !self.isDynamicIslandActive {
+                    self.isDynamicIslandActive = true
+                    shouldWakeDynamicIsland = true
+                }
+            }
+            var droppedThisStep: UInt64 = 0
+            if let prevSeq = self.lastSequenceNumber {
+                let expected = prevSeq &+ 1
+                if seq != expected {
+                    let diff = seq &- expected
+                    if diff < 1000 {
+                        droppedThisStep = UInt64(diff)
+                    }
+                }
+            }
+            self.lastSequenceNumber = seq
+            let pcName = self.pairedPcName
+            stateLock.unlock()
+
             if framesWritten > 0 {
                 let bufferedFrames = max(0, Int(self.writeIndex - self.readIndex))
                 let bufferedMs = Double(bufferedFrames) / 48.0
+                let codecLabel = isOpus ? "Opus 48kHz" : "PCM 48kHz"
+
+                if shouldWakeDynamicIsland {
+                    AudioSessionManager.shared.updateNowPlayingInfo(
+                        isStreaming: true,
+                        pcName: pcName,
+                        codec: codecLabel
+                    )
+                }
 
                 DispatchQueue.main.async {
                     guard self.isRunning, self.sessionGeneration == gen else { return }
+                    self.isPcReachable = true
+                    self.reachablePcName = pcName
                     self.packetsReceived &+= 1
                     if droppedThisStep > 0 {
                         self.packetsDropped &+= droppedThisStep
                     }
 
-                    // Throttle UI updates to every 10 packets (~100ms) to minimize main-thread CPU load
                     if self.packetsReceived % 10 == 1 {
-                        let codecLabel = isOpus ? "Opus 48kHz" : "PCM 48kHz"
                         let statusText = "Streaming • \(pcName)"
                         let statusChanged = self.connectionStatus != statusText
 
@@ -599,7 +851,7 @@ final class UdpAudioEngineReceiver: ObservableObject {
                         self.estimatedBufferMs = bufferedMs
                         self.outputPeakLevel = min(1.0, peak)
 
-                        if statusChanged {
+                        if statusChanged && self.isDynamicIslandActive {
                             AudioSessionManager.shared.updateNowPlayingInfo(
                                 isStreaming: true,
                                 pcName: pcName,
@@ -610,5 +862,39 @@ final class UdpAudioEngineReceiver: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Local Subnet Broadcast Helper for Universal LAN / Hotspot Discovery
+
+    static func getLocalBroadcastAddresses() -> [String] {
+        var broadcasts: [String] = []
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else {
+            return broadcasts
+        }
+        defer { freeifaddrs(ifaddr) }
+
+        var ptr: UnsafeMutablePointer<ifaddrs>? = firstAddr
+        while let current = ptr {
+            let interface = current.pointee
+            let flags = Int32(interface.ifa_flags)
+            if (flags & IFF_UP) != 0,
+               (flags & IFF_LOOPBACK) == 0,
+               let addr = interface.ifa_addr,
+               addr.pointee.sa_family == UInt8(AF_INET) {
+                if (flags & IFF_BROADCAST) != 0, let dstAddr = interface.ifa_dstaddr {
+                    var bcastIn = dstAddr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee.sin_addr }
+                    var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                    if inet_ntop(AF_INET, &bcastIn, &buf, socklen_t(INET_ADDRSTRLEN)) != nil {
+                        let bcastStr = String(cString: buf)
+                        if !bcastStr.isEmpty && !broadcasts.contains(bcastStr) {
+                            broadcasts.append(bcastStr)
+                        }
+                    }
+                }
+            }
+            ptr = interface.ifa_next
+        }
+        return broadcasts
     }
 }

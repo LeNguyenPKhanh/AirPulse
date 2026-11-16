@@ -5,18 +5,27 @@ import UIKit
 
 /// Configures iOS `AVAudioSession`, `MPNowPlayingInfoCenter`, and `MPRemoteCommandCenter`
 /// so AirPulse appears in the iOS Lock Screen, Notification Center, Control Center,
-/// and Dynamic Island (Now Playing Live Activity) just like Spotify / Apple Music.
+/// and Dynamic Island while streaming, and automatically turns off Dynamic Island
+/// after a few seconds of inactivity (paused/stopped or silent PC).
 final class AudioSessionManager: ObservableObject {
     static let shared = AudioSessionManager()
 
     /// Default false so iOS enables Lock Screen / Notification Center / Dynamic Island Now Playing controls.
     /// Can be toggled on in-app if the user wants to mix with other iPhone apps simultaneously.
     @Published var mixWithOthers: Bool = false {
-        didSet { reconfigureSession() }
+        didSet {
+            if isSessionActive {
+                reconfigureSession()
+            }
+        }
     }
 
     @Published var duckOthers: Bool = false {
-        didSet { reconfigureSession() }
+        didSet {
+            if isSessionActive {
+                reconfigureSession()
+            }
+        }
     }
 
     @Published private(set) var currentRouteDescription: String = "iPhone Speaker"
@@ -25,15 +34,16 @@ final class AudioSessionManager: ObservableObject {
     var onRemotePlayRequested: (() -> Void)?
     var onRemotePauseRequested: (() -> Void)?
     var onRemoteToggleRequested: (() -> Void)?
+    var onInactivitySessionDeactivated: (() -> Void)?
 
     private var cachedArtwork: MPMediaItemArtwork?
     private var remoteCommandsConfigured = false
+    private var isSessionActive = false
+    private var inactivityDismissWorkItem: DispatchWorkItem?
 
     private init() {
         setupNotifications()
-        reconfigureSession()
-        setupRemoteTransportControls()
-        updateNowPlayingInfo(isStreaming: false, pcName: "Windows 11 PC", codec: "PCM 48kHz")
+        updateRouteDescription()
     }
 
     func reconfigureSession() {
@@ -53,9 +63,11 @@ final class AudioSessionManager: ObservableObject {
                 mode: .default,
                 options: options
             )
-            try session.setPreferredSampleRate(48000.0)
-            try session.setPreferredIOBufferDuration(0.015) // 15ms hardware DMA cushion prevents glitches when switching iOS apps
+            // Best-effort preferred sample rate & 15ms hardware DMA buffer (graceful on all iPhones/iPads/AirPods)
+            try? session.setPreferredSampleRate(48000.0)
+            try? session.setPreferredIOBufferDuration(0.015)
             try session.setActive(true, options: [])
+            isSessionActive = true
             updateRouteDescription()
         } catch {
             print("[AudioSessionManager] Failed to configure AVAudioSession: \(error.localizedDescription)")
@@ -68,49 +80,60 @@ final class AudioSessionManager: ObservableObject {
         guard !remoteCommandsConfigured else { return }
         remoteCommandsConfigured = true
 
-        DispatchQueue.main.async {
-            UIApplication.shared.beginReceivingRemoteControlEvents()
-        }
-
         let commandCenter = MPRemoteCommandCenter.shared()
 
-        commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
             self?.onRemotePlayRequested?()
             return .success
         }
 
-        commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
             self?.onRemotePauseRequested?()
             return .success
         }
 
-        commandCenter.stopCommand.isEnabled = true
         commandCenter.stopCommand.addTarget { [weak self] _ in
             self?.onRemotePauseRequested?()
             return .success
         }
 
-        commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
             self?.onRemoteToggleRequested?()
             return .success
         }
 
-        // Disable seek/skip tracks so iOS displays the clean LIVE stream layout on Lock Screen & Dynamic Island
         commandCenter.nextTrackCommand.isEnabled = false
         commandCenter.previousTrackCommand.isEnabled = false
         commandCenter.changePlaybackPositionCommand.isEnabled = false
     }
 
+    private func setRemoteCommandsEnabled(_ enabled: Bool) {
+        setupRemoteTransportControls()
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.playCommand.isEnabled = enabled
+        commandCenter.pauseCommand.isEnabled = enabled
+        commandCenter.stopCommand.isEnabled = enabled
+        commandCenter.togglePlayPauseCommand.isEnabled = enabled
+
+        if enabled {
+            UIApplication.shared.beginReceivingRemoteControlEvents()
+        } else {
+            UIApplication.shared.endReceivingRemoteControlEvents()
+        }
+    }
+
     func updateNowPlayingInfo(isStreaming: Bool, pcName: String, codec: String) {
         DispatchQueue.main.async {
+            self.inactivityDismissWorkItem?.cancel()
+            self.inactivityDismissWorkItem = nil
+
+            self.setRemoteCommandsEnabled(true)
+
             var info: [String: Any] = [
-                MPMediaItemPropertyTitle: isStreaming ? "AirPulse • \(pcName)" : "AirPulse • Standby",
+                MPMediaItemPropertyTitle: isStreaming ? "AirPulse • \(pcName)" : "AirPulse • Paused",
                 MPMediaItemPropertyArtist: isStreaming
-                    ? "Windows 11 Live Stream (\(codec))"
-                    : "Tap Play to Stream PC Audio",
+                    ? "PC Live Audio (\(codec))"
+                    : "Stream Paused • Closing in 4s...",
                 MPMediaItemPropertyAlbumTitle: "AirPulse Liquid Glass Audio Bridge",
                 MPNowPlayingInfoPropertyIsLiveStream: true,
                 MPNowPlayingInfoPropertyPlaybackRate: isStreaming ? 1.0 : 0.0,
@@ -125,6 +148,50 @@ final class AudioSessionManager: ObservableObject {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = info
             if #available(iOS 13.0, *) {
                 MPNowPlayingInfoCenter.default().playbackState = isStreaming ? .playing : .paused
+            }
+
+            // When stopped/paused, automatically dismiss Dynamic Island & Now Playing after 4 seconds of inactivity
+            if !isStreaming {
+                let workItem = DispatchWorkItem { [weak self] in
+                    self?.dismissDynamicIslandCompletely()
+                }
+                self.inactivityDismissWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0, execute: workItem)
+            }
+        }
+    }
+
+    /// Hides the Dynamic Island Now Playing Live Activity when the PC has been completely silent for a few seconds,
+    /// while keeping the background audio session alive so audio resumes instantly when the PC plays sound again.
+    func hideNowPlayingForSilence() {
+        DispatchQueue.main.async {
+            self.inactivityDismissWorkItem?.cancel()
+            self.inactivityDismissWorkItem = nil
+            self.setRemoteCommandsEnabled(false)
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            if #available(iOS 13.0, *) {
+                MPNowPlayingInfoCenter.default().playbackState = .stopped
+            }
+        }
+    }
+
+    /// Completely tears down Dynamic Island, Lock Screen Now Playing, and deactivates AVAudioSession after inactivity.
+    func dismissDynamicIslandCompletely() {
+        DispatchQueue.main.async {
+            self.inactivityDismissWorkItem?.cancel()
+            self.inactivityDismissWorkItem = nil
+
+            self.onInactivitySessionDeactivated?()
+            self.setRemoteCommandsEnabled(false)
+
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            if #available(iOS 13.0, *) {
+                MPNowPlayingInfoCenter.default().playbackState = .stopped
+            }
+
+            if self.isSessionActive {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                self.isSessionActive = false
             }
         }
     }
@@ -237,7 +304,7 @@ final class AudioSessionManager: ObservableObject {
             return
         }
 
-        if type == .ended {
+        if type == .ended && isSessionActive {
             reconfigureSession()
             onInterruptionEnded?()
         }
@@ -245,7 +312,9 @@ final class AudioSessionManager: ObservableObject {
 
     @objc private func handleRouteChange(_ notification: Notification) {
         updateRouteDescription()
-        onInterruptionEnded?()
+        if isSessionActive {
+            onInterruptionEnded?()
+        }
     }
 
     private func updateRouteDescription() {

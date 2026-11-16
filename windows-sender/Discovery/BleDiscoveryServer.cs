@@ -137,28 +137,29 @@ public sealed class BleDiscoveryServer : IDisposable
                     var interfaces = GetAllLanInterfaces();
                     if (interfaces.Count > 0)
                     {
-                        // Broadcast ONLY the primary LAN interface (Wi-Fi preferred) so the iPhone only shows 1 PC entry
-                        var primary = interfaces[0];
-                        LocalIpAddress = primary.Address.ToString();
+                        LocalIpAddress = interfaces[0].Address.ToString();
 
-                        try
+                        foreach (var iface in interfaces)
                         {
-                            using var udp = new UdpClient(new IPEndPoint(primary.Address, 0))
+                            try
                             {
-                                EnableBroadcast = true
-                            };
+                                using var udp = new UdpClient(new IPEndPoint(iface.Address, 0))
+                                {
+                                    EnableBroadcast = true
+                                };
 
-                            var beacon = Encoding.UTF8.GetBytes($"AS_BEACON|{primary.Address}|{UdpPort}|{Environment.MachineName}");
+                                var beacon = Encoding.UTF8.GetBytes($"AS_BEACON|{iface.Address}|{UdpPort}|{Environment.MachineName}");
 
-                            var directedEndpoint = new IPEndPoint(primary.BroadcastAddress, AudioPacketProtocol.DefaultUdpPort + 1);
-                            await udp.SendAsync(beacon, beacon.Length, directedEndpoint);
+                                var directedEndpoint = new IPEndPoint(iface.BroadcastAddress, AudioPacketProtocol.DefaultUdpPort + 1);
+                                await udp.SendAsync(beacon, beacon.Length, directedEndpoint);
 
-                            var globalEndpoint = new IPEndPoint(IPAddress.Broadcast, AudioPacketProtocol.DefaultUdpPort + 1);
-                            await udp.SendAsync(beacon, beacon.Length, globalEndpoint);
-                        }
-                        catch
-                        {
-                            // Ignore per-interface send errors
+                                var globalEndpoint = new IPEndPoint(IPAddress.Broadcast, AudioPacketProtocol.DefaultUdpPort + 1);
+                                await udp.SendAsync(beacon, beacon.Length, globalEndpoint);
+                            }
+                            catch
+                            {
+                                // Ignore per-interface send errors
+                            }
                         }
                     }
                 }

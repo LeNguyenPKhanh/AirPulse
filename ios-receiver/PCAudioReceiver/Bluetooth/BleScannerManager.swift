@@ -7,45 +7,51 @@ struct DiscoveredPcEndpoint: Identifiable, Equatable {
     let name: String
     let ipAddress: String
     let port: UInt16
-    let source: String // "BLE" or "Wi-Fi Beacon"
+    let source: String // "BLE", "Wi-Fi Beacon", or "UDP Probe"
 }
 
-/// Passively scans for the Windows 11 PC via Bluetooth Low Energy (CoreBluetooth)
-/// and UDP LAN Broadcast Beacons so the user can pair in one tap without entering an IP.
+/// Passively and actively scans for any Windows 10/11 PC running AirPulse via
+/// Bluetooth Low Energy (CoreBluetooth) and UDP LAN Broadcast Beacons,
+/// and automatically prunes offline PCs after 4 seconds of silence.
 final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     static let serviceUuid = CBUUID(string: "A1B2C3D4-E5F6-4789-ABCD-EF0123456789")
     static let endpointCharacteristicUuid = CBUUID(string: "A1B2C3D4-E5F6-4789-ABCD-EF012345678A")
 
     @Published private(set) var discoveredEndpoints: [DiscoveredPcEndpoint] = []
-    @Published private(set) var bluetoothStateText: String = "Initializing Bluetooth..."
+    @Published private(set) var bluetoothStateText: String = "Searching for PC on Local Network..."
+
+    var onEndpointSeen: ((DiscoveredPcEndpoint) -> Void)?
 
     private var centralManager: CBCentralManager!
     private var activePeripherals: [UUID: CBPeripheral] = [:]
     private var beaconSocketFd: Int32 = -1
     private var isBeaconListening = false
+    private var lastSeenTimestamps: [String: TimeInterval] = [:]
+    private var pruneTimer: DispatchSourceTimer?
 
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: DispatchQueue.global(qos: .userInitiated))
         startLanBeaconListener()
+        startStaleEndpointPruneTimer()
     }
 
     deinit {
+        pruneTimer?.cancel()
         stopLanBeaconListener()
     }
 
     func startScanning() {
         DispatchQueue.main.async {
             self.discoveredEndpoints.removeAll()
+            self.lastSeenTimestamps.removeAll()
+            self.bluetoothStateText = "Scanning for PC via BLE & Wi-Fi..."
         }
         if centralManager.state == .poweredOn {
             centralManager.scanForPeripherals(
                 withServices: [Self.serviceUuid],
-                options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+                options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
             )
-            DispatchQueue.main.async {
-                self.bluetoothStateText = "Scanning for Windows 11 PC via BLE & Wi-Fi..."
-            }
         }
     }
 
@@ -59,7 +65,7 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
             }
         case .unauthorized:
             DispatchQueue.main.async {
-                self.bluetoothStateText = "Bluetooth Permission Needed (Wi-Fi Active)"
+                self.bluetoothStateText = "Wi-Fi Auto-Discovery Active"
             }
         default:
             DispatchQueue.main.async {
@@ -74,9 +80,8 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
     ) {
-        let pcName = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? "Windows 11 PC"
+        let pcName = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? "Windows PC"
 
-        // 1. Check Manufacturer Data for fast zero-connection payload: [CompanyID 2B][0x41, 0x53][IPv4 4B][Port 2B BE]
         if let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data, mfgData.count >= 10 {
             let bytes = [UInt8](mfgData)
             if bytes[2] == 0x41 && bytes[3] == 0x53 {
@@ -87,7 +92,6 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
             }
         }
 
-        // 2. Also connect to read GATT Endpoint Characteristic if Manufacturer Data wasn't included
         activePeripherals[peripheral.identifier] = peripheral
         peripheral.delegate = self
         central.connect(peripheral, options: nil)
@@ -118,11 +122,10 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
             return
         }
 
-        // Format: "192.168.1.100:49152:DESKTOP-PC"
         let parts = text.split(separator: ":")
         if parts.count >= 2, let port = UInt16(parts[1]) {
             let ip = String(parts[0])
-            let host = parts.count >= 3 ? String(parts[2]) : (peripheral.name ?? "Windows 11 PC")
+            let host = parts.count >= 3 ? String(parts[2]) : (peripheral.name ?? "Windows PC")
             registerEndpoint(DiscoveredPcEndpoint(name: host, ipAddress: ip, port: port, source: "BLE GATT"))
         }
 
@@ -130,10 +133,13 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
         activePeripherals.removeValue(forKey: peripheral.identifier)
     }
 
-    private func registerEndpoint(_ endpoint: DiscoveredPcEndpoint) {
+    func registerEndpoint(_ endpoint: DiscoveredPcEndpoint) {
+        let now = CFAbsoluteTimeGetCurrent()
+        onEndpointSeen?(endpoint)
+
         DispatchQueue.main.async {
+            self.lastSeenTimestamps[endpoint.id] = now
             if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
-                // Only update if the PC hostname actually changed, avoiding unnecessary UI rebuilds
                 if self.discoveredEndpoints[idx].name != endpoint.name {
                     self.discoveredEndpoints[idx] = endpoint
                 }
@@ -144,7 +150,26 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
         }
     }
 
-    // MARK: - UDP LAN Broadcast Beacon Fallback (Port 49153)
+    private func startStaleEndpointPruneTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        timer.schedule(deadline: .now() + 1.0, repeating: 1.0)
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            let now = CFAbsoluteTimeGetCurrent()
+            let beforeCount = self.discoveredEndpoints.count
+            self.discoveredEndpoints.removeAll { ep in
+                guard let last = self.lastSeenTimestamps[ep.id] else { return true }
+                return (now - last) > 4.2
+            }
+            if beforeCount > 0 && self.discoveredEndpoints.isEmpty {
+                self.bluetoothStateText = "Searching for PC on Local Network..."
+            }
+        }
+        pruneTimer = timer
+        timer.resume()
+    }
+
+    // MARK: - UDP LAN Broadcast Beacon Listener (Port 49153)
 
     private func startLanBeaconListener() {
         guard !isBeaconListening else { return }
@@ -158,6 +183,7 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
 
             var reuse: Int32 = 1
             setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
+            setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuse, socklen_t(MemoryLayout<Int32>.size))
 
             var addr = sockaddr_in()
             addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
@@ -177,15 +203,32 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
 
             var buffer = [UInt8](repeating: 0, count: 256)
             while self.isBeaconListening {
-                let bytesRead = recv(fd, &buffer, buffer.count, 0)
+                var senderAddr = sockaddr_in()
+                var senderLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+                let bytesRead = withUnsafeMutablePointer(to: &senderAddr) {
+                    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { addrPtr in
+                        recvfrom(fd, &buffer, buffer.count, 0, addrPtr, &senderLen)
+                    }
+                }
                 if bytesRead > 0 {
                     let data = Data(bytes: buffer, count: bytesRead)
                     if let message = String(data: data, encoding: .utf8),
                        message.hasPrefix("AS_BEACON|") {
                         let comps = message.split(separator: "|")
                         if comps.count >= 4, let port = UInt16(comps[2]) {
-                            let ip = String(comps[1])
+                            var ip = String(comps[1])
                             let name = String(comps[3])
+
+                            // Prefer packet source IP if valid private IPv4
+                            var ipCString = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                            var addrCopy = senderAddr.sin_addr
+                            if inet_ntop(AF_INET, &addrCopy, &ipCString, socklen_t(INET_ADDRSTRLEN)) != nil {
+                                let pktIp = String(cString: ipCString)
+                                if !pktIp.isEmpty && pktIp != "0.0.0.0" && pktIp != "127.0.0.1" {
+                                    ip = pktIp
+                                }
+                            }
+
                             self.registerEndpoint(
                                 DiscoveredPcEndpoint(name: name, ipAddress: ip, port: port, source: "Wi-Fi Beacon")
                             )

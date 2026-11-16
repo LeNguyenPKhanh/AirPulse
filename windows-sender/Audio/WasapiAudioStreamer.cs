@@ -234,8 +234,9 @@ public sealed class WasapiAudioStreamer : IDisposable
         IsStreaming = true;
 
         // 1. Start dedicated MTA thread for Windows 11 Process Loopback ("VAD\Process_Loopback")
-        // so COM interfaces stay on the same MTA thread with zero STA deadlock
+        // with automatic fallback to standard WasapiLoopbackCapture + Resampler for older Windows 10 PCs
         Exception? initError = null;
+        bool useFallbackWasapi = false;
         using var readyEvent = new ManualResetEventSlim(false);
         var captureThread = new Thread(() =>
         {
@@ -244,24 +245,30 @@ public sealed class WasapiAudioStreamer : IDisposable
                 _processLoopbackClient = CreateProcessLoopbackAudioClient();
                 _processLoopbackClient.Start();
             }
-            catch (Exception ex)
+            catch
             {
-                initError = ex;
+                // Older Windows 10 builds or custom drivers without Process Loopback support:
+                // seamlessly fall back to universal WasapiLoopbackCapture!
+                useFallbackWasapi = true;
             }
             finally
             {
                 readyEvent.Set();
             }
 
-            if (initError == null)
+            if (!useFallbackWasapi && initError == null)
             {
                 ProcessLoopbackCaptureThread(_cts.Token);
+            }
+            else if (useFallbackWasapi)
+            {
+                FallbackWasapiLoopbackThread(deviceId, _cts.Token);
             }
         })
         {
             IsBackground = true,
             Priority = ThreadPriority.Highest,
-            Name = "AirPulse-ProcessLoopback-MTA"
+            Name = "AirPulse-UniversalAudioCapture-MTA"
         };
         captureThread.SetApartmentState(ApartmentState.MTA);
         captureThread.Start();
@@ -276,7 +283,7 @@ public sealed class WasapiAudioStreamer : IDisposable
 
         ApplyPcSpeakerMuteState();
 
-        // 2. Listen for iPhone UDP Handshake ("AH")
+        // 2. Listen for iPhone UDP Handshake ("AH") & Reachability Probes ("AH_PING")
         _ = Task.Run(() => ListenForIphoneHandshakeAsync(_cts.Token));
     }
 
@@ -438,6 +445,113 @@ public sealed class WasapiAudioStreamer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Universal fallback for older Windows 10 PCs that do not support Windows 11 Process Loopback.
+    /// Automatically resamples any sound card format (44.1kHz, 48kHz, 96kHz, 192kHz, Mono/Stereo/Surround) to 48kHz 16-bit Stereo.
+    /// </summary>
+    private void FallbackWasapiLoopbackThread(string? deviceId, CancellationToken token)
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            MMDevice? device = null;
+            if (!string.IsNullOrEmpty(deviceId) && deviceId != AudioDeviceItem.AutoDefaultId)
+            {
+                try { device = enumerator.GetDevice(deviceId); } catch { }
+            }
+            device ??= enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+
+            using var capture = new WasapiLoopbackCapture(device);
+            var bufferedProvider = new BufferedWaveProvider(capture.WaveFormat)
+            {
+                DiscardOnBufferOverflow = true,
+                BufferDuration = TimeSpan.FromMilliseconds(500)
+            };
+
+            capture.DataAvailable += (_, e) =>
+            {
+                if (e.BytesRecorded > 0)
+                {
+                    bufferedProvider.AddSamples(e.Buffer, 0, e.BytesRecorded);
+                }
+            };
+
+            var targetFormat = new WaveFormat(AudioPacketProtocol.SampleRate, 16, AudioPacketProtocol.Channels);
+            using var resampler = new MediaFoundationResampler(bufferedProvider, targetFormat)
+            {
+                ResamplerQuality = 30
+            };
+
+            byte[] readBytes = new byte[InterleavedShortsPerPacket * sizeof(short)];
+            short[] frameShorts = new short[InterleavedShortsPerPacket];
+            short[] silentBuf = new short[InterleavedShortsPerPacket];
+            long lastPacketSentTick = Environment.TickCount64;
+
+            capture.StartRecording();
+            while (!token.IsCancellationRequested && IsStreaming)
+            {
+                Thread.Sleep(3);
+                while (bufferedProvider.BufferedBytes > 0 && !token.IsCancellationRequested)
+                {
+                    int bytesRead = resampler.Read(readBytes, 0, readBytes.Length);
+                    if (bytesRead <= 0)
+                        break;
+
+                    int shortsCount = bytesRead / 2;
+                    Buffer.BlockCopy(readBytes, 0, frameShorts, 0, shortsCount * 2);
+
+                    float gain = VolumeGain;
+                    float maxPeak = 0f;
+                    int spaceLeft = _accumBuffer.Length - _accumCount;
+                    int count = Math.Min(spaceLeft, shortsCount);
+                    for (int i = 0; i < count; i++)
+                    {
+                        float s = (frameShorts[i] / 32768f) * gain;
+                        float abs = Math.Abs(s);
+                        if (abs > maxPeak) maxPeak = abs;
+                        _accumBuffer[_accumCount + i] = (short)(Math.Clamp(s, -1f, 1f) * 32767f);
+                    }
+                    _accumCount += count;
+                    CurrentPeakLevel = Math.Clamp(maxPeak, 0f, 1f);
+                    PeakLevelUpdated?.Invoke(CurrentPeakLevel);
+
+                    while (_accumCount >= InterleavedShortsPerPacket)
+                    {
+                        EncodeAndSendFrame(
+                            _accumBuffer.AsSpan(0, InterleavedShortsPerPacket),
+                            SamplesPerChannelPerPacket,
+                            PacketFlags.None
+                        );
+                        lastPacketSentTick = Environment.TickCount64;
+                        int rem = _accumCount - InterleavedShortsPerPacket;
+                        if (rem > 0)
+                        {
+                            _accumBuffer.AsSpan(InterleavedShortsPerPacket, rem).CopyTo(_accumBuffer.AsSpan(0, rem));
+                        }
+                        _accumCount = rem;
+                    }
+                }
+
+                if ((Environment.TickCount64 - lastPacketSentTick) >= 150 && _targetEndpoint != null)
+                {
+                    CurrentPeakLevel = 0f;
+                    PeakLevelUpdated?.Invoke(0f);
+                    lastPacketSentTick = Environment.TickCount64;
+                    EncodeAndSendFrame(
+                        silentBuf.AsSpan(),
+                        SamplesPerChannelPerPacket,
+                        PacketFlags.HeartbeatKeepAlive | PacketFlags.SilentFrame
+                    );
+                }
+            }
+            capture.StopRecording();
+        }
+        catch
+        {
+            // Ignore fallback termination errors
+        }
+    }
+
     private void ApplyPcSpeakerMuteState()
     {
         lock (_muteLock)
@@ -552,6 +666,23 @@ public sealed class WasapiAudioStreamer : IDisposable
                     if (text.StartsWith("_STOP", StringComparison.Ordinal))
                     {
                         HandleClientDisconnected();
+                        continue;
+                    }
+
+                    // Reachability probe from iPhone ("AH_PING|<port>|<name>")
+                    // Reply immediately with "AH_PONG|<PC_NAME>" so iPhone unlocks the Start Audio Stream button
+                    // WITHOUT starting audio transmission or muting PC speakers yet!
+                    if (text.StartsWith("_PING", StringComparison.Ordinal) || text.StartsWith("_DISCOVER", StringComparison.Ordinal))
+                    {
+                        int replyPort = result.RemoteEndPoint.Port;
+                        var pingParts = text.Split('|');
+                        if (pingParts.Length >= 2 && int.TryParse(pingParts[1], out int parsedPingPort) && parsedPingPort > 0)
+                        {
+                            replyPort = parsedPingPort;
+                        }
+                        var pongEndpoint = new IPEndPoint(result.RemoteEndPoint.Address, replyPort);
+                        var pongBytes = Encoding.UTF8.GetBytes($"AH_PONG|{Environment.MachineName}");
+                        await _udpSocket.SendAsync(pongBytes, pongBytes.Length, pongEndpoint);
                         continue;
                     }
 
