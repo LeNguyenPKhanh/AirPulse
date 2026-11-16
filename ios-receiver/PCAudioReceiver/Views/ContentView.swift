@@ -12,9 +12,9 @@ struct AirPulseLaunchOverlay: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.059, green: 0.075, blue: 0.114),
-                    Color(red: 0.090, green: 0.094, blue: 0.161),
-                    Color(red: 0.051, green: 0.063, blue: 0.094)
+                    Color(red: 0.08, green: 0.22, blue: 0.48),
+                    Color(red: 0.16, green: 0.14, blue: 0.42),
+                    Color(red: 0.07, green: 0.16, blue: 0.34)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -24,26 +24,26 @@ struct AirPulseLaunchOverlay: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 1.0, green: 0.53, blue: 0.40).opacity(0.28), .clear],
+                        colors: [Color(red: 0.22, green: 0.78, blue: 1.0).opacity(0.52), .clear],
                         center: .center,
                         startRadius: 10,
-                        endRadius: 180
+                        endRadius: 210
                     )
                 )
-                .frame(width: 340, height: 340)
-                .offset(x: -70, y: -150)
+                .frame(width: 380, height: 380)
+                .offset(x: -75, y: -160)
 
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 0.47, green: 0.78, blue: 1.0).opacity(0.24), .clear],
+                        colors: [Color(red: 1.0, green: 0.46, blue: 0.56).opacity(0.45), .clear],
                         center: .center,
                         startRadius: 10,
-                        endRadius: 180
+                        endRadius: 210
                     )
                 )
-                .frame(width: 340, height: 340)
-                .offset(x: 80, y: 150)
+                .frame(width: 380, height: 380)
+                .offset(x: 85, y: 150)
 
             VStack(spacing: 24) {
                 ZStack {
@@ -152,7 +152,7 @@ struct LiquidGLWebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.055, green: 0.063, blue: 0.09, alpha: 1.0)
+        webView.backgroundColor = UIColor(red: 0.09, green: 0.20, blue: 0.44, alpha: 1.0)
         webView.scrollView.backgroundColor = .clear
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.showsVerticalScrollIndicator = false
@@ -179,6 +179,7 @@ struct LiquidGLWebView: UIViewRepresentable {
         private var isEvaluatingJs = false
         private var isAppInForeground = true
         private var lastToggleActionTime: TimeInterval = 0
+        private var lastPushedJson: String = ""
         private var stateTimer: Timer?
 
         init(parent: LiquidGLWebView) {
@@ -370,10 +371,13 @@ struct LiquidGLWebView: UIViewRepresentable {
                 "peakLevel": Double(parent.receiver.outputPeakLevel)
             ]
 
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: stateDict, options: []),
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: stateDict, options: [.sortedKeys]),
                   let jsonString = String(data: jsonData, encoding: .utf8) else {
                 return
             }
+
+            guard jsonString != lastPushedJson else { return }
+            lastPushedJson = jsonString
 
             isEvaluatingJs = true
             webView.evaluateJavaScript("window.updateAppState && window.updateAppState(\(jsonString));") { [weak self] _, _ in

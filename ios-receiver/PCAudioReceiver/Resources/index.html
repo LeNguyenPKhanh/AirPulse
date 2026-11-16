@@ -6,14 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>AirPulse — iOS Liquid Glass</title>
+    <title>AirPulse — iOS 26 Liquid Glass</title>
     <style>
       :root {
-        --text-primary: #f5f5f7;
-        --text-secondary: rgba(245, 245, 247, 0.72);
-        --text-tertiary: rgba(245, 245, 247, 0.46);
-        --accent-mint: #30d158;
-        --accent-sky: #64d2ff;
+        --text-primary: #ffffff;
+        --text-secondary: rgba(255, 255, 255, 0.82);
+        --text-tertiary: rgba(255, 255, 255, 0.58);
+        --accent-mint: #34c759;
+        --accent-cyan: #5ac8fa;
         --spring-out: cubic-bezier(0.22, 1, 0.36, 1);
         --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
       }
@@ -31,7 +31,7 @@
       body {
         width: 100%;
         min-height: 100vh;
-        background-color: #0b0e18;
+        background-color: #163772;
         color: var(--text-primary);
         font-family:
           -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
@@ -41,39 +41,121 @@
         position: relative;
       }
 
-      /* Calm, organic Apple iOS 26 ambient silk wallpaper captured by liquidGL */
-      #apple-wallpaper {
+      /* =====================================================================
+         1. APPLE iOS 26 SPATIAL WALLPAPER SCENE (Snapshot Target for liquidGL)
+         Luminous, multi-layered colorful aurora + 3D SVG ribbons so liquidGL
+         refracts, magnifies, and warps vibrant colours along every glass bevel!
+         ===================================================================== */
+      #wallpaper-scene {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: -1;
+        min-height: 100vh;
+        z-index: 0;
+        overflow: hidden;
         pointer-events: none;
+        background: linear-gradient(
+          160deg,
+          #124596 0%,
+          #1f2f82 30%,
+          #47277d 62%,
+          #133d6e 100%
+        );
+      }
+
+      .wp-orb {
+        position: absolute;
+        border-radius: 50%;
+      }
+
+      .wp-orb-1 {
+        width: 390px;
+        height: 390px;
+        top: -50px;
+        left: -80px;
+        background: radial-gradient(
+          circle,
+          rgba(0, 225, 255, 0.82) 0%,
+          rgba(0, 168, 255, 0.38) 45%,
+          rgba(0, 168, 255, 0) 74%
+        );
+      }
+
+      .wp-orb-2 {
+        width: 420px;
+        height: 420px;
+        top: 110px;
+        right: -110px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 107, 129, 0.85) 0%,
+          rgba(255, 159, 67, 0.42) 46%,
+          rgba(255, 107, 129, 0) 74%
+        );
+      }
+
+      .wp-orb-3 {
+        width: 440px;
+        height: 440px;
+        top: 390px;
+        left: -100px;
+        background: radial-gradient(
+          circle,
+          rgba(165, 94, 234, 0.82) 0%,
+          rgba(72, 219, 251, 0.4) 48%,
+          rgba(72, 219, 251, 0) 75%
+        );
+      }
+
+      .wp-orb-4 {
+        width: 410px;
+        height: 410px;
+        bottom: 40px;
+        right: -90px;
+        background: radial-gradient(
+          circle,
+          rgba(46, 213, 115, 0.72) 0%,
+          rgba(0, 210, 211, 0.36) 46%,
+          rgba(0, 210, 211, 0) 74%
+        );
+      }
+
+      .wp-ribbons-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         display: block;
       }
 
-      /* Main scrollable stage — NO z-index here so liquidGL's single WebGL canvas
-         sits directly behind all .liquidGL cards & controls without stacking conflicts */
+      /* =====================================================================
+         2. FOREGROUND STAGE & APPLE iOS 26 LIQUID GLASS CONTAINERS
+         ===================================================================== */
       .app-stage {
         position: relative;
         width: 100%;
-        max-width: 440px;
+        max-width: 430px;
         margin: 0 auto;
         padding: calc(env(safe-area-inset-top, 44px) + 10px) 16px
-          calc(env(safe-area-inset-bottom, 24px) + 28px) 16px;
+          calc(env(safe-area-inset-bottom, 24px) + 34px) 16px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 15px;
       }
 
-      /* Keep inner text & icons crisp above the liquidGL WebGL lens */
+      .liquidGL {
+        pointer-events: auto !important;
+      }
+
       .liquidGL > * {
         position: relative;
         z-index: 2;
       }
 
-      /* Top Apple Header */
+      /* Floating iOS 26 Top Bar */
       .top-bar {
         display: flex;
         align-items: center;
@@ -87,51 +169,77 @@
         gap: 10px;
       }
 
-      .brand-orb {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--accent-mint);
-        box-shadow: 0 0 12px rgba(48, 209, 88, 0.9);
-        transition:
-          background 0.4s var(--spring-out),
-          box-shadow 0.4s var(--spring-out);
+      .brand-logo-pill {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.34),
+          rgba(255, 255, 255, 0.1)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        box-shadow:
+          0 4px 14px rgba(0, 0, 0, 0.16),
+          inset 0 1px 1px rgba(255, 255, 255, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .brand-orb.idle {
-        background: var(--accent-sky);
-        box-shadow: 0 0 10px rgba(100, 210, 255, 0.75);
+      .brand-logo-pill svg {
+        width: 19px;
+        height: 19px;
+        fill: #ffffff;
       }
 
       .brand-title {
         font-size: 23px;
         font-weight: 700;
         letter-spacing: -0.028em;
-        color: var(--text-primary);
+        color: #ffffff;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
       }
 
-      /* Liquid Glass Codec Pill */
+      /* Floating Codec Status Capsule */
       .codec-pill {
-        position: relative;
-        font-size: 11.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
         font-weight: 600;
-        letter-spacing: 0.01em;
-        color: var(--text-primary);
+        letter-spacing: -0.01em;
+        color: #ffffff;
         padding: 7px 14px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        pointer-events: auto !important;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
       }
 
-      /* Apple iOS 26 Liquid Glass Card */
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-mint);
+        box-shadow: 0 0 10px rgba(52, 199, 89, 0.95);
+        transition:
+          background 0.35s var(--spring-out),
+          box-shadow 0.35s var(--spring-out);
+      }
+
+      .status-dot.idle {
+        background: var(--accent-cyan);
+        box-shadow: 0 0 8px rgba(90, 200, 250, 0.85);
+      }
+
+      /* Primary iOS 26 Liquid Glass Pane */
       .glass-card {
         position: relative;
         width: 100%;
-        border-radius: 30px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        pointer-events: auto !important;
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.32);
       }
 
       .card-inner {
@@ -151,26 +259,63 @@
       }
 
       .eyebrow {
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 700;
-        letter-spacing: 0.11em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--text-tertiary);
       }
 
-      /* Hero Status & Waveform */
+      /* Hero Now Playing Header */
+      .hero-header-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .hero-artwork-orb {
+        width: 52px;
+        height: 52px;
+        border-radius: 17px;
+        flex-shrink: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(90, 200, 250, 0.48),
+          rgba(165, 94, 234, 0.45),
+          rgba(255, 107, 129, 0.48)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        box-shadow:
+          0 6px 18px rgba(0, 0, 0, 0.18),
+          inset 0 1px 2px rgba(255, 255, 255, 0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero-artwork-orb svg {
+        width: 26px;
+        height: 26px;
+        fill: #ffffff;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+      }
+
       .hero-status {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
+        min-width: 0;
       }
 
       .hero-headline {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: -0.025em;
-        line-height: 1.18;
-        color: var(--text-primary);
+        line-height: 1.2;
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .hero-subline {
@@ -178,43 +323,40 @@
         font-weight: 500;
         color: var(--text-secondary);
         letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
+      /* Smooth Acoustic Waveform Pill */
       .waveform-wrap {
         position: relative;
         width: 100%;
-        height: 34px;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.09);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
         display: flex;
         align-items: center;
       }
 
       .waveform-svg {
         width: 100%;
-        height: 32px;
+        height: 28px;
         overflow: visible;
       }
 
       .waveform-svg path {
         fill: none;
-        stroke: rgba(255, 255, 255, 0.92);
-        stroke-width: 2.1;
+        stroke: #ffffff;
+        stroke-width: 2.2;
         stroke-linecap: round;
         stroke-linejoin: round;
-        filter: drop-shadow(0 2px 8px rgba(100, 210, 255, 0.35));
       }
 
-      .hairline {
-        width: 100%;
-        height: 1px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.03),
-          rgba(255, 255, 255, 0.16),
-          rgba(255, 255, 255, 0.03)
-        );
-      }
-
-      /* Telemetry Trio */
+      /* 3-Pill Telemetry Row */
       .stat-trio {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -222,48 +364,51 @@
       }
 
       .stat-item {
+        padding: 10px 12px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.11);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
         display: flex;
         flex-direction: column;
         gap: 2px;
       }
 
-      .stat-item + .stat-item {
-        border-left: 1px solid rgba(255, 255, 255, 0.12);
-        padding-left: 12px;
-      }
-
       .stat-label {
         font-size: 10px;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--text-tertiary);
       }
 
       .stat-value {
-        font-size: 16px;
+        font-size: 15.5px;
         font-weight: 700;
         letter-spacing: -0.02em;
         font-variant-numeric: tabular-nums;
-        color: var(--text-primary);
+        color: #ffffff;
       }
 
       .stat-value small {
-        font-size: 11px;
-        font-weight: 500;
+        font-size: 10.5px;
+        font-weight: 600;
         color: var(--text-secondary);
         margin-left: 2px;
       }
 
-      /* Secondary Liquid Glass Pill Button */
+      /* Tactile iOS 26 Capsule Button */
       .apple-btn {
         position: relative;
         appearance: none;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.26);
-        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        box-shadow:
+          0 4px 12px rgba(0, 0, 0, 0.12),
+          inset 0 1px 1px rgba(255, 255, 255, 0.55);
+        color: #ffffff;
         border-radius: 999px;
-        padding: 7px 15px;
+        padding: 6px 14px;
         font-size: 12.5px;
         font-weight: 600;
         letter-spacing: -0.01em;
@@ -271,63 +416,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        pointer-events: auto !important;
-        transition: transform 0.22s var(--spring-bounce);
+        gap: 5px;
+        transition:
+          transform 0.22s var(--spring-bounce),
+          background 0.2s ease;
       }
 
       .apple-btn:active {
-        transform: scale(0.93);
-      }
-
-      /* Primary Stream Action Button — Stacked Liquid Glass Lens */
-      .primary-stream-btn {
-        position: relative;
-        width: 100%;
-        height: 52px;
-        border-radius: 26px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: #ffffff;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: -0.015em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        cursor: pointer;
-        pointer-events: auto !important;
-        transition:
-          opacity 0.28s var(--spring-out),
-          transform 0.24s var(--spring-bounce),
-          border-color 0.28s ease;
-      }
-
-      .primary-stream-btn:active:not(:disabled):not(.disabled) {
-        transform: scale(0.97);
-      }
-
-      .primary-stream-btn:disabled,
-      .primary-stream-btn.disabled {
-        opacity: 0.42;
-        cursor: not-allowed;
-        pointer-events: none !important;
-      }
-
-      .primary-stream-btn .btn-inner {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
-      }
-
-      .primary-stream-btn svg {
-        width: 18px;
-        height: 18px;
-        fill: currentColor;
+        transform: scale(0.92);
+        background: rgba(255, 255, 255, 0.28);
       }
 
       /* Discovered PC List */
@@ -342,16 +439,14 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 15px;
+        padding: 12px 14px;
         border-radius: 20px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        pointer-events: auto !important;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35);
       }
 
       .endpoint-meta {
-        position: relative;
-        z-index: 2;
         display: flex;
         flex-direction: column;
         gap: 2px;
@@ -361,7 +456,7 @@
         font-size: 14.5px;
         font-weight: 600;
         letter-spacing: -0.015em;
-        color: var(--text-primary);
+        color: #ffffff;
       }
 
       .endpoint-sub {
@@ -372,14 +467,13 @@
       }
 
       .connect-pill {
-        position: relative;
-        z-index: 2;
         padding: 7px 15px;
         border-radius: 999px;
         font-size: 12px;
-        font-weight: 600;
-        border: 1px solid rgba(255, 255, 255, 0.32);
-        background: rgba(255, 255, 255, 0.16);
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        background: rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
         color: #ffffff;
         cursor: pointer;
         transition:
@@ -392,12 +486,12 @@
       }
 
       .connect-pill.active {
-        background: rgba(48, 209, 88, 0.3);
-        border-color: rgba(48, 209, 88, 0.7);
-        color: #7aff99;
+        background: rgba(52, 199, 89, 0.38);
+        border-color: rgba(120, 255, 155, 0.8);
+        color: #ffffff;
       }
 
-      /* Manual IPv4 + Port Row */
+      /* Manual IPv4 + Port Capsules */
       .input-row {
         display: grid;
         grid-template-columns: 1fr 92px;
@@ -408,20 +502,18 @@
         position: relative;
         border-radius: 18px;
         height: 44px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        pointer-events: auto !important;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.32);
       }
 
       .apple-input {
-        position: relative;
-        z-index: 2;
         width: 100%;
         height: 100%;
         padding: 0 14px;
         border: none;
         background: transparent;
-        color: var(--text-primary);
+        color: #ffffff;
         font-size: 14px;
         font-weight: 600;
         font-family: inherit;
@@ -432,21 +524,86 @@
       }
 
       .apple-input::placeholder {
-        color: rgba(245, 245, 247, 0.38);
+        color: rgba(255, 255, 255, 0.45);
         font-weight: 500;
       }
 
-      /* Elastic Apple Music / iOS 26 Liquid Glass Sliders */
+      /* Primary Stream Action Pill — Prominent iOS 26 Liquid Glass Button */
+      .primary-stream-btn {
+        position: relative;
+        width: 100%;
+        height: 52px;
+        border-radius: 26px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.28),
+          rgba(255, 255, 255, 0.14)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.48);
+        box-shadow:
+          0 8px 22px rgba(0, 0, 0, 0.18),
+          inset 0 1px 2px rgba(255, 255, 255, 0.72);
+        color: #ffffff;
+        font-size: 15.5px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        transition:
+          opacity 0.28s var(--spring-out),
+          transform 0.24s var(--spring-bounce),
+          background 0.28s ease,
+          border-color 0.28s ease;
+      }
+
+      .primary-stream-btn.streaming {
+        background: linear-gradient(
+          135deg,
+          rgba(52, 199, 89, 0.46),
+          rgba(48, 209, 88, 0.24)
+        );
+        border-color: rgba(135, 255, 165, 0.75);
+      }
+
+      .primary-stream-btn:active:not(:disabled):not(.disabled) {
+        transform: scale(0.96);
+      }
+
+      .primary-stream-btn:disabled,
+      .primary-stream-btn.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none !important;
+      }
+
+      .primary-stream-btn .btn-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+      }
+
+      .primary-stream-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+
+      /* iOS 26 Control Center Thick Capsule Sliders */
       .slider-group {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 7px;
       }
 
       .slider-header {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
+        padding: 0 2px;
       }
 
       .slider-title {
@@ -458,34 +615,33 @@
       .slider-readout {
         font-size: 13.5px;
         font-weight: 700;
-        color: var(--text-primary);
+        color: #ffffff;
         font-variant-numeric: tabular-nums;
       }
 
       .elastic-slider {
         position: relative;
-        height: 30px;
+        height: 38px;
         display: flex;
         align-items: center;
         cursor: pointer;
         touch-action: none;
+        transition: transform 0.28s var(--spring-bounce);
+      }
+
+      .elastic-slider.dragging {
+        transform: scaleY(1.08) scaleX(1.015);
       }
 
       .elastic-track {
         position: relative;
         width: 100%;
-        height: 8px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.15);
+        height: 34px;
+        border-radius: 17px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14);
         overflow: hidden;
-        transition:
-          height 0.3s var(--spring-bounce),
-          background 0.25s ease;
-      }
-
-      .elastic-slider.dragging .elastic-track {
-        height: 14px;
-        background: rgba(255, 255, 255, 0.24);
       }
 
       .elastic-fill {
@@ -494,39 +650,39 @@
         top: 0;
         bottom: 0;
         width: 50%;
-        border-radius: 999px;
+        border-radius: 16px;
         background: linear-gradient(
           90deg,
-          rgba(255, 255, 255, 0.72),
-          rgba(255, 255, 255, 0.96)
+          rgba(255, 255, 255, 0.38),
+          rgba(255, 255, 255, 0.68)
         );
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75);
       }
 
-      .elastic-knob {
+      .slider-icon {
         position: absolute;
+        left: 12px;
         top: 50%;
-        left: 50%;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
-        transform: translate(-50%, -50%) scale(1);
-        transition: transform 0.3s var(--spring-bounce);
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        fill: rgba(255, 255, 255, 0.9);
         pointer-events: none;
+        z-index: 2;
       }
 
-      .elastic-slider.dragging .elastic-knob {
-        transform: translate(-50%, -50%) scale(1.25);
-      }
-
-      /* iOS Liquid Glass Spring Toggle Switches */
+      /* iOS 26 Settings Toggle Rows */
       .toggle-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 14px;
-        padding: 2px 0;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        cursor: pointer;
       }
 
       .toggle-copy {
@@ -538,12 +694,12 @@
       .toggle-title {
         font-size: 14px;
         font-weight: 600;
-        color: var(--text-primary);
+        color: #ffffff;
         letter-spacing: -0.01em;
       }
 
       .toggle-desc {
-        font-size: 12px;
+        font-size: 11.5px;
         color: var(--text-secondary);
         line-height: 1.32;
       }
@@ -553,18 +709,17 @@
         width: 51px;
         height: 31px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.16);
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.35);
         flex-shrink: 0;
-        cursor: pointer;
         transition:
-          background 0.3s var(--spring-out),
-          border-color 0.3s var(--spring-out);
+          background 0.28s var(--spring-out),
+          border-color 0.28s var(--spring-out);
       }
 
       .ios-switch.on {
-        background: rgba(48, 209, 88, 0.88);
-        border-color: rgba(120, 255, 150, 0.7);
+        background: rgba(52, 199, 89, 0.92);
+        border-color: rgba(140, 255, 170, 0.8);
       }
 
       .ios-switch-thumb {
@@ -575,8 +730,8 @@
         height: 25px;
         border-radius: 50%;
         background: #ffffff;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        transition: transform 0.32s var(--spring-bounce);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.26);
+        transition: transform 0.3s var(--spring-bounce);
       }
 
       .ios-switch.on .ios-switch-thumb {
@@ -585,17 +740,96 @@
     </style>
   </head>
   <body>
-    <!-- Calm, Organic Apple iOS 26 Wallpaper for True Optical Liquid Glass Refraction -->
-    <canvas id="apple-wallpaper"></canvas>
+    <!-- ===================================================================
+         APPLE iOS 26 SPATIAL WALLPAPER SCENE (Captured by liquidGL)
+         Luminous ocean-sky-coral-violet waves & 3D petals so every glass
+         card visibly bends & refracts rich colours along its 3D bevels!
+         =================================================================== -->
+    <div id="wallpaper-scene">
+      <div class="wp-orb wp-orb-1"></div>
+      <div class="wp-orb wp-orb-2"></div>
+      <div class="wp-orb wp-orb-3"></div>
+      <div class="wp-orb wp-orb-4"></div>
 
+      <svg
+        class="wp-ribbons-svg"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 430 980"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="waveA" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#48dbfb" stop-opacity="0.72" />
+            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.42" />
+            <stop offset="100%" stop-color="#ff6b81" stop-opacity="0.65" />
+          </linearGradient>
+          <linearGradient id="waveB" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ff9f43" stop-opacity="0.68" />
+            <stop offset="50%" stop-color="#f368e0" stop-opacity="0.52" />
+            <stop offset="100%" stop-color="#0abde3" stop-opacity="0.70" />
+          </linearGradient>
+          <linearGradient id="waveC" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#1dd1a1" stop-opacity="0.66" />
+            <stop offset="50%" stop-color="#48dbfb" stop-opacity="0.52" />
+            <stop offset="100%" stop-color="#feca57" stop-opacity="0.64" />
+          </linearGradient>
+        </defs>
+
+        <!-- Flowing iOS 26 3D Silk Petals behind the cards -->
+        <path
+          d="M-40,130 C110,40 280,230 470,110 L470,250 C290,340 120,170 -40,260 Z"
+          fill="url(#waveA)"
+        />
+        <path
+          d="M-40,390 C140,280 290,490 470,360 L470,510 C280,610 130,420 -40,520 Z"
+          fill="url(#waveB)"
+        />
+        <path
+          d="M-40,680 C120,580 300,770 470,650 L470,810 C300,900 130,720 -40,820 Z"
+          fill="url(#waveC)"
+        />
+
+        <!-- Crisp Specular Highlight Curves that make bevel refraction pop -->
+        <path
+          d="M-30,132 C110,42 280,232 460,112"
+          fill="none"
+          stroke="rgba(255,255,255,0.62)"
+          stroke-width="3"
+        />
+        <path
+          d="M-30,392 C140,282 290,492 460,362"
+          fill="none"
+          stroke="rgba(255,255,255,0.55)"
+          stroke-width="3"
+        />
+        <path
+          d="M-30,682 C120,582 300,772 460,652"
+          fill="none"
+          stroke="rgba(255,255,255,0.55)"
+          stroke-width="3"
+        />
+      </svg>
+    </div>
+
+    <!-- ===================================================================
+         MAIN FOREGROUND UI STAGE
+         =================================================================== -->
     <main class="app-stage">
       <!-- Top Header -->
       <header class="top-bar">
         <div class="brand-group">
-          <span class="brand-orb idle" id="status-orb"></span>
+          <div class="brand-logo-pill">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M3 12a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v0a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zm4-4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8zm4-3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V5zm4 4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V9zm4 2a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2z"
+              />
+            </svg>
+          </div>
           <h1 class="brand-title">AirPulse</h1>
         </div>
+
         <div class="codec-pill liquidGL" id="codec-badge-wrap">
+          <span class="status-dot idle" id="status-orb"></span>
           <span id="codec-badge">PCM 48kHz</span>
         </div>
       </header>
@@ -608,26 +842,33 @@
             <span class="eyebrow" id="route-label">iPhone Speaker</span>
           </div>
 
-          <div class="hero-status">
-            <div class="hero-headline" id="connection-headline">
-              Waiting for PC...
+          <div class="hero-header-row">
+            <div class="hero-artwork-orb">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9zm-3.5 11.5a1 1 0 0 1-2 0v-5a1 1 0 0 1 2 0zm4 2.5a1 1 0 0 1-2 0V7a1 1 0 0 1 2 0zm4-2a1 1 0 0 1-2 0V9a1 1 0 0 1 2 0zm4-1.5a1 1 0 0 1-2 0v-3a1 1 0 0 1 2 0z"
+                />
+              </svg>
             </div>
-            <div class="hero-subline" id="bt-status-subline">
-              Searching for PC on Local Network...
+            <div class="hero-status">
+              <div class="hero-headline" id="connection-headline">
+                Waiting for PC...
+              </div>
+              <div class="hero-subline" id="bt-status-subline">
+                Searching for PC on Local Network...
+              </div>
             </div>
           </div>
 
           <div class="waveform-wrap">
             <svg
               class="waveform-svg"
-              viewBox="0 0 320 32"
+              viewBox="0 0 320 28"
               preserveAspectRatio="none"
             >
-              <path id="waveform-path" d="M0,16 L320,16"></path>
+              <path id="waveform-path" d="M0,14 L320,14"></path>
             </svg>
           </div>
-
-          <div class="hairline"></div>
 
           <div class="stat-trio">
             <div class="stat-item">
@@ -653,13 +894,13 @@
         <div class="card-inner">
           <div class="row-between">
             <span class="eyebrow">PC Discovery &amp; Connection</span>
-            <button class="apple-btn liquidGL" id="btn-rescan" type="button">
+            <button class="apple-btn" id="btn-rescan" type="button">
               <span>Rescan</span>
             </button>
           </div>
 
           <div class="endpoints-list" id="endpoints-container">
-            <div class="endpoint-item liquidGL">
+            <div class="endpoint-item">
               <div class="endpoint-meta">
                 <span class="endpoint-name">Searching local network...</span>
                 <span class="endpoint-sub"
@@ -669,10 +910,8 @@
             </div>
           </div>
 
-          <div class="hairline"></div>
-
           <div class="input-row">
-            <div class="input-shell liquidGL">
+            <div class="input-shell">
               <input
                 class="apple-input"
                 id="input-ip"
@@ -682,7 +921,7 @@
                 value=""
               />
             </div>
-            <div class="input-shell liquidGL">
+            <div class="input-shell">
               <input
                 class="apple-input"
                 id="input-port"
@@ -695,7 +934,7 @@
           </div>
 
           <button
-            class="primary-stream-btn liquidGL disabled"
+            class="primary-stream-btn disabled"
             id="btn-toggle-stream"
             type="button"
             disabled
@@ -712,7 +951,7 @@
         </div>
       </section>
 
-      <!-- Card 3: Volume & Latency Elastic Controls Lens -->
+      <!-- Card 3: iOS 26 Control Center Acoustic Sliders Lens -->
       <section class="glass-card liquidGL">
         <div class="card-inner">
           <span class="eyebrow">Acoustic &amp; Buffer Tuning</span>
@@ -730,13 +969,12 @@
                   id="fill-volume"
                   style="width: 50%"
                 ></div>
+                <svg class="slider-icon" viewBox="0 0 24 24">
+                  <path
+                    d="M11 5L6 9H2v6h4l5 4V5zm4.5 7A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 1.5-3.5zm2.5 0a7 7 0 0 1-4 6.32v-2.16A5 5 0 0 0 16 12a5 5 0 0 0-2-4.16V5.68A7 7 0 0 1 18 12z"
+                  />
+                </svg>
               </div>
-              <div
-                class="elastic-knob"
-                id="knob-volume"
-                style="left: 50%"
-                data-liquid-ignore
-              ></div>
             </div>
           </div>
 
@@ -753,13 +991,12 @@
                   id="fill-buffer"
                   style="width: 45%"
                 ></div>
+                <svg class="slider-icon" viewBox="0 0 24 24">
+                  <path
+                    d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2zm1 10.41l3.29 3.3-1.42 1.41L11 13V7h2z"
+                  />
+                </svg>
               </div>
-              <div
-                class="elastic-knob"
-                id="knob-buffer"
-                style="left: 45%"
-                data-liquid-ignore
-              ></div>
             </div>
           </div>
         </div>
@@ -783,8 +1020,6 @@
             </div>
           </div>
 
-          <div class="hairline"></div>
-
           <div class="toggle-row" id="toggle-duck">
             <div class="toggle-copy">
               <span class="toggle-title">Duck Other Audio</span>
@@ -803,108 +1038,16 @@
     <!-- Official naughtyduk/liquidGL v3.0.0 Library -->
     <script src="liquidGL.js"></script>
     <script>
-      /* 1. Paint Cohesive Apple iOS 26 Ambient Silk Wallpaper onto #apple-wallpaper
-            Smooth, organic light blooms and soft glass petals so liquidGL's WebGL
-            bevel refraction visibly warps the contours around every card & button
-            while keeping the layout calm and clean like a native Apple system app. */
-      function paintAppleLiquidWallpaper() {
-        const canvas = document.getElementById("apple-wallpaper");
-        const dpr = Math.min(window.devicePixelRatio || 2, 2);
-        const w =
-          document.documentElement.clientWidth || window.innerWidth || 390;
+      /* 1. Sync Wallpaper Height so scrolling always has rich colours behind every glass card */
+      function syncWallpaperHeight() {
+        const wp = document.getElementById("wallpaper-scene");
+        if (!wp) return;
         const h = Math.max(
           document.body.scrollHeight,
           document.documentElement.scrollHeight,
           window.innerHeight || 844,
-          920,
         );
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        canvas.style.width = w + "px";
-        canvas.style.height = h + "px";
-
-        const ctx = canvas.getContext("2d");
-        ctx.scale(dpr, dpr);
-
-        // Deep Apple Midnight Indigo Base
-        const baseGrad = ctx.createLinearGradient(0, 0, w, h);
-        baseGrad.addColorStop(0, "#0b1020");
-        baseGrad.addColorStop(0.45, "#12162c");
-        baseGrad.addColorStop(1, "#090c16");
-        ctx.fillStyle = baseGrad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Soft Apple Ambient Aurora Blooms
-        const blooms = [
-          {
-            x: w * 0.18,
-            y: h * 0.14,
-            r: w * 0.68,
-            c0: "rgba(94, 158, 255, 0.46)",
-            c1: "rgba(94, 158, 255, 0)",
-          },
-          {
-            x: w * 0.85,
-            y: h * 0.28,
-            r: w * 0.65,
-            c0: "rgba(155, 108, 255, 0.42)",
-            c1: "rgba(155, 108, 255, 0)",
-          },
-          {
-            x: w * 0.2,
-            y: h * 0.54,
-            r: w * 0.7,
-            c0: "rgba(64, 210, 255, 0.36)",
-            c1: "rgba(64, 210, 255, 0)",
-          },
-          {
-            x: w * 0.82,
-            y: h * 0.78,
-            r: w * 0.68,
-            c0: "rgba(255, 126, 95, 0.34)",
-            c1: "rgba(255, 126, 95, 0)",
-          },
-        ];
-
-        blooms.forEach((b) => {
-          const g = ctx.createRadialGradient(b.x, b.y, 8, b.x, b.y, b.r);
-          g.addColorStop(0, b.c0);
-          g.addColorStop(1, b.c1);
-          ctx.fillStyle = g;
-          ctx.fillRect(0, 0, w, h);
-        });
-
-        // Subtle, wide Apple iOS 26 silk light folds (gives liquidGL bevels crisp optical warping at card edges)
-        const folds = [
-          { y: h * 0.18, amp: 55, alpha: 0.16 },
-          { y: h * 0.42, amp: -50, alpha: 0.14 },
-          { y: h * 0.66, amp: 48, alpha: 0.14 },
-          { y: h * 0.86, amp: -42, alpha: 0.12 },
-        ];
-
-        folds.forEach((f) => {
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(-20, f.y);
-          ctx.bezierCurveTo(
-            w * 0.32,
-            f.y + f.amp,
-            w * 0.68,
-            f.y - f.amp,
-            w + 20,
-            f.y + f.amp * 0.25,
-          );
-          ctx.lineTo(w + 20, f.y + 110);
-          ctx.lineTo(-20, f.y + 110);
-          ctx.closePath();
-
-          const fg = ctx.createLinearGradient(0, f.y - 40, 0, f.y + 100);
-          fg.addColorStop(0, `rgba(255, 255, 255, ${f.alpha})`);
-          fg.addColorStop(1, "rgba(255, 255, 255, 0)");
-          ctx.fillStyle = fg;
-          ctx.fill();
-          ctx.restore();
-        });
+        wp.style.height = h + "px";
       }
 
       /* 2. Bridge Helper to Swift WKScriptMessageHandler */
@@ -922,60 +1065,47 @@
         }
       }
 
-      /* 3. Initialize Official naughtyduk/liquidGL Lenses on a Single Unified Renderer */
-      let glassLenses = null;
+      /* 3. Initialize Official naughtyduk/liquidGL ONCE on #wallpaper-scene
+            - Captures #wallpaper-scene (colorful orbs + 3D SVG ribbons)
+            - Applies real-time optical refraction, 3D bevel depth, chromatic aberration,
+              specular edge highlights, 3D touch tilt, and fluid touch ripples at 120Hz! */
       let notifiedReady = false;
-
-      const BASE_REFRACTION = 0.042;
-      const BASE_BEVEL_WIDTH = 0.18;
-
       function signalReadyOnce() {
         if (notifiedReady) return;
         notifiedReady = true;
         postToNative({ action: "ready" });
       }
 
-      function destroyExistingLenses(inst) {
-        if (!inst) return;
-        const arr = Array.isArray(inst) ? inst : [inst];
-        arr.forEach((l) => {
-          try {
-            if (l && typeof l.destroy === "function") l.destroy();
-          } catch {}
-        });
-      }
-
-      function initLiquidGL() {
+      function initLiquidGLOnce() {
+        syncWallpaperHeight();
         if (typeof window.liquidGL !== "function") {
           signalReadyOnce();
           return;
         }
         try {
-          destroyExistingLenses(glassLenses);
-
-          // Single unified liquidGL call: liquidGL automatically stacks child controls
-          // on top of parent cards via its built-in stackRegion pipeline!
-          glassLenses = window.liquidGL({
+          window.liquidGL({
             target: ".liquidGL",
-            snapshot: "body",
+            snapshot: "#wallpaper-scene",
             content: false,
-            resolution: 2.0,
-            refraction: BASE_REFRACTION,
+            resolution: 1.5,
+            refraction: 0.052,
             aberration: 0.35,
-            bevelDepth: 0.14,
-            bevelWidth: BASE_BEVEL_WIDTH,
-            frost: 0.45,
+            bevelDepth: 0.095,
+            bevelWidth: 0.165,
+            frost: 0.55,
             shadow: true,
             specular: true,
             reveal: "none",
-            tilt: false,
+            tilt: true,
+            tiltFactor: 3.2,
+            tiltEase: 350,
             draggable: false,
             interaction: "fluid",
-            interactionStrength: 1.0,
-            interactionRadius: 0.55,
-            interactionViscosity: 0.58,
-            magnify: 1.08,
-            tint: "rgba(255, 255, 255, 0.06)",
+            interactionStrength: 0.65,
+            interactionRadius: 0.42,
+            interactionViscosity: 0.65,
+            magnify: 1.07,
+            tint: "rgba(255, 255, 255, 0.08)",
             helper: false,
             on: {
               init() {
@@ -989,45 +1119,50 @@
         }
       }
 
-      /* 4. Smooth Audio-Reactive Waveform & Liquid Glass Pulse (Paused when app is backgrounded) */
-      const SAMPLE_COUNT = 42;
+      /* 4. On-Demand Smooth Waveform Animator (Runs ONLY while streaming so idle scrolling is 120fps) */
+      const SAMPLE_COUNT = 38;
       const waveSamples = new Array(SAMPLE_COUNT).fill(0);
       let wavePhase = 0;
       let currentAudioPeak = 0;
       let smoothedPeak = 0;
       let isStreamRunning = false;
       let isPageVisible = true;
+      let waveRafId = null;
 
-      document.addEventListener("visibilitychange", () => {
-        isPageVisible = !document.hidden;
-        if (isPageVisible) {
-          requestAnimationFrame(tickWaveformAndRefraction);
-        }
-      });
+      function startWaveformLoopIfNeeded() {
+        if (waveRafId !== null || !isPageVisible || !isStreamRunning) return;
+        waveRafId = requestAnimationFrame(tickWaveform);
+      }
 
-      function tickWaveformAndRefraction() {
+      function tickWaveform() {
+        waveRafId = null;
         if (!isPageVisible) return;
 
         const pathEl = document.getElementById("waveform-path");
         if (pathEl) {
+          if (!isStreamRunning && smoothedPeak < 0.01) {
+            pathEl.setAttribute("d", "M0,14 L320,14");
+            return;
+          }
+
           smoothedPeak =
             currentAudioPeak > smoothedPeak
               ? currentAudioPeak * 0.65 + smoothedPeak * 0.35
-              : smoothedPeak * 0.88;
+              : smoothedPeak * 0.86;
 
-          wavePhase += isStreamRunning ? 0.22 : 0.06;
+          wavePhase += 0.24;
           waveSamples.shift();
 
           const activeAmp = isStreamRunning
-            ? Math.max(0.07, Math.min(0.95, smoothedPeak * 1.5))
-            : 0.04;
+            ? Math.max(0.08, Math.min(0.95, smoothedPeak * 1.5))
+            : 0.0;
           const nextVal =
             Math.sin(wavePhase) * activeAmp * 0.65 +
             Math.sin(wavePhase * 2.1) * activeAmp * 0.35;
           waveSamples.push(nextVal);
 
           const w = 320;
-          const h = 32;
+          const h = 28;
           const mid = h / 2;
           const step = w / (SAMPLE_COUNT - 1);
           let d = "";
@@ -1043,37 +1178,22 @@
           pathEl.setAttribute("d", d);
         }
 
-        // Gently modulate liquidGL refraction with the PC audio beat
-        if (glassLenses) {
-          const lenses = Array.isArray(glassLenses)
-            ? glassLenses
-            : [glassLenses];
-          const pulse = isStreamRunning ? smoothedPeak * 0.55 : 0;
-          lenses.forEach((lens) => {
-            if (lens && lens.options) {
-              lens.options.refraction = BASE_REFRACTION * (1 + pulse);
-              lens.options.bevelWidth =
-                BASE_BEVEL_WIDTH * (1 + pulse * 0.25);
-            }
-          });
+        if (isStreamRunning || smoothedPeak >= 0.01) {
+          waveRafId = requestAnimationFrame(tickWaveform);
         }
-
-        requestAnimationFrame(tickWaveformAndRefraction);
       }
 
-      /* 5. Elastic Slider Binding */
-      function bindElasticSlider(
-        sliderId,
-        fillId,
-        knobId,
-        min,
-        max,
-        step,
-        onChange,
-      ) {
+      document.addEventListener("visibilitychange", () => {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) {
+          startWaveformLoopIfNeeded();
+        }
+      });
+
+      /* 5. Control Center Style Elastic Slider Binding */
+      function bindElasticSlider(sliderId, fillId, min, max, step, onChange) {
         const slider = document.getElementById(sliderId);
         const fill = document.getElementById(fillId);
-        const knob = document.getElementById(knobId);
         let dragging = false;
 
         const updateFromClientX = (clientX) => {
@@ -1087,7 +1207,6 @@
           const clamped = Math.min(max, Math.max(min, stepped));
           const pct = ((clamped - min) / (max - min)) * 100;
           fill.style.width = `${pct}%`;
-          knob.style.left = `${pct}%`;
           onChange(clamped);
         };
 
@@ -1118,7 +1237,6 @@
             const clamped = Math.min(max, Math.max(min, val));
             const pct = ((clamped - min) / (max - min)) * 100;
             fill.style.width = `${pct}%`;
-            knob.style.left = `${pct}%`;
           },
         };
       }
@@ -1127,13 +1245,19 @@
       let bufferControl = null;
       let lastEndpointsKey = "";
 
+      function setTextIfChanged(id, text) {
+        const el = document.getElementById(id);
+        if (el && el._lastText !== text) {
+          el._lastText = text;
+          el.textContent = text;
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
-        paintAppleLiquidWallpaper();
-        initLiquidGL();
-        requestAnimationFrame(tickWaveformAndRefraction);
+        initLiquidGLOnce();
 
         window.addEventListener("resize", () => {
-          paintAppleLiquidWallpaper();
+          syncWallpaperHeight();
         });
 
         // Rescan button
@@ -1187,13 +1311,11 @@
         volumeControl = bindElasticSlider(
           "slider-volume",
           "fill-volume",
-          "knob-volume",
           0,
           200,
           5,
           (pct) => {
-            document.getElementById("vol-readout").textContent =
-              `${Math.round(pct)}%`;
+            setTextIfChanged("vol-readout", `${Math.round(pct)}%`);
             postToNative({ action: "setVolume", value: pct / 100.0 });
           },
         );
@@ -1202,13 +1324,11 @@
         bufferControl = bindElasticSlider(
           "slider-buffer",
           "fill-buffer",
-          "knob-buffer",
           20,
           100,
           5,
           (ms) => {
-            document.getElementById("buf-readout").textContent =
-              `${Math.round(ms)} ms`;
+            setTextIfChanged("buf-readout", `${Math.round(ms)} ms`);
             postToNative({ action: "setBufferMs", value: ms });
           },
         );
@@ -1228,54 +1348,59 @@
           postToNative({ action: "setDuckOthers", value: next });
         });
 
-        setTimeout(signalReadyOnce, 650);
+        setTimeout(signalReadyOnce, 500);
       });
 
-      /* 6. Live State Receiver called from Swift */
+      /* 6. Live State Receiver called from Swift (Zero-Reflow Diffed Updates) */
       window.updateAppState = function (state) {
         if (!state) return;
 
+        const wasRunning = isStreamRunning;
         isStreamRunning = !!state.isRunning;
         currentAudioPeak = Number(state.peakLevel || 0);
+
+        if (isStreamRunning && !wasRunning) {
+          startWaveformLoopIfNeeded();
+        }
 
         const orb = document.getElementById("status-orb");
         if (orb) {
           orb.classList.toggle("idle", !isStreamRunning);
         }
 
-        const headline = document.getElementById("connection-headline");
-        if (headline && state.connectionStatus) {
-          headline.textContent = state.connectionStatus;
+        if (state.connectionStatus) {
+          setTextIfChanged("connection-headline", state.connectionStatus);
         }
-
-        const subline = document.getElementById("bt-status-subline");
-        if (subline && state.btState) {
-          subline.textContent = state.btState;
+        if (state.btState) {
+          setTextIfChanged("bt-status-subline", state.btState);
         }
-
-        const codecBadge = document.getElementById("codec-badge");
-        if (codecBadge && state.activeCodecName) {
-          codecBadge.textContent = state.activeCodecName;
+        if (state.activeCodecName) {
+          setTextIfChanged("codec-badge", state.activeCodecName);
         }
-
-        const routeLabel = document.getElementById("route-label");
-        if (routeLabel && state.routeDescription) {
-          routeLabel.textContent = state.routeDescription;
+        if (state.routeDescription) {
+          setTextIfChanged("route-label", state.routeDescription);
         }
 
         const statLatency = document.getElementById("stat-latency");
         if (statLatency && typeof state.estimatedBufferMs === "number") {
-          statLatency.innerHTML = `${state.estimatedBufferMs.toFixed(1)}<small>ms</small>`;
+          const latHtml = `${state.estimatedBufferMs.toFixed(1)}<small>ms</small>`;
+          if (statLatency._lastHtml !== latHtml) {
+            statLatency._lastHtml = latHtml;
+            statLatency.innerHTML = latHtml;
+          }
         }
 
-        const statPackets = document.getElementById("stat-packets");
-        if (statPackets && typeof state.packetsReceived === "number") {
-          statPackets.textContent = state.packetsReceived.toLocaleString();
+        if (typeof state.packetsReceived === "number") {
+          setTextIfChanged(
+            "stat-packets",
+            state.packetsReceived.toLocaleString(),
+          );
         }
-
-        const statDropped = document.getElementById("stat-dropped");
-        if (statDropped && typeof state.packetsDropped === "number") {
-          statDropped.textContent = state.packetsDropped.toLocaleString();
+        if (typeof state.packetsDropped === "number") {
+          setTextIfChanged(
+            "stat-dropped",
+            state.packetsDropped.toLocaleString(),
+          );
         }
 
         // Sync auto-discovered PC IP/Port into input fields when user is not typing
@@ -1310,24 +1435,34 @@
         if (streamBtn) {
           streamBtn.disabled = !canPressStreamBtn;
           streamBtn.classList.toggle("disabled", !canPressStreamBtn);
+          streamBtn.classList.toggle("streaming", isStreamRunning);
         }
 
         if (streamLabel && streamIcon) {
+          let nextLabel = "Waiting for PC Connection...";
+          let nextIcon =
+            '<path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7z"/>';
+
           if (isStreamRunning) {
-            streamLabel.textContent = "Stop Audio Stream";
-            streamIcon.innerHTML =
+            nextLabel = "Stop Audio Stream";
+            nextIcon =
               '<rect x="6" y="5" width="4" height="14" rx="1.5"></rect><rect x="14" y="5" width="4" height="14" rx="1.5"></rect>';
           } else if (isPcReachable) {
             const pcTag = state.reachablePcName
               ? ` • ${state.reachablePcName}`
               : "";
-            streamLabel.textContent = `Start Audio Stream${pcTag}`;
-            streamIcon.innerHTML =
+            nextLabel = `Start Audio Stream${pcTag}`;
+            nextIcon =
               '<path d="M7.5 5.2c0-1.3 1.4-2 2.5-1.4l9.3 5.4a1.7 1.7 0 0 1 0 2.9l-9.3 5.4c-1.1.6-2.5-.1-2.5-1.4z"/>';
-          } else {
-            streamLabel.textContent = "Waiting for PC Connection...";
-            streamIcon.innerHTML =
-              '<path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7z"/>';
+          }
+
+          if (streamLabel._lastText !== nextLabel) {
+            streamLabel._lastText = nextLabel;
+            streamLabel.textContent = nextLabel;
+          }
+          if (streamIcon._lastIcon !== nextIcon) {
+            streamIcon._lastIcon = nextIcon;
+            streamIcon.innerHTML = nextIcon;
           }
         }
 
@@ -1338,7 +1473,7 @@
           typeof state.volumeGain === "number"
         ) {
           const pct = Math.round(state.volumeGain * 100);
-          document.getElementById("vol-readout").textContent = `${pct}%`;
+          setTextIfChanged("vol-readout", `${pct}%`);
           volumeControl.setValue(pct);
         }
 
@@ -1348,7 +1483,7 @@
           typeof state.targetBufferMs === "number"
         ) {
           const ms = Math.round(state.targetBufferMs);
-          document.getElementById("buf-readout").textContent = `${ms} ms`;
+          setTextIfChanged("buf-readout", `${ms} ms`);
           bufferControl.setValue(ms);
         }
 
@@ -1364,7 +1499,7 @@
             .classList.toggle("on", state.duckOthers);
         }
 
-        // Discovered PC Endpoints
+        // Discovered PC Endpoints (ResizeObserver inside liquidGL automatically adapts the card lens!)
         if (Array.isArray(state.endpoints)) {
           const key = JSON.stringify(state.endpoints) + "|" + isStreamRunning;
           if (key !== lastEndpointsKey) {
@@ -1375,7 +1510,7 @@
 
             if (state.endpoints.length === 0) {
               container.innerHTML = `
-                <div class="endpoint-item liquidGL">
+                <div class="endpoint-item">
                   <div class="endpoint-meta">
                     <span class="endpoint-name">Searching local network...</span>
                     <span class="endpoint-sub">Ensure AirPulse is running on your PC</span>
@@ -1387,7 +1522,7 @@
                 const isConnected =
                   isStreamRunning && ipInput.value.trim() === ep.ip;
                 const row = document.createElement("div");
-                row.className = "endpoint-item liquidGL";
+                row.className = "endpoint-item";
                 row.innerHTML = `
                   <div class="endpoint-meta">
                     <span class="endpoint-name">${ep.name}</span>
@@ -1410,11 +1545,7 @@
                 container.appendChild(row);
               });
             }
-
-            requestAnimationFrame(() => {
-              paintAppleLiquidWallpaper();
-              initLiquidGL();
-            });
+            syncWallpaperHeight();
           }
         }
       };
