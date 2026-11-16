@@ -31,6 +31,7 @@
       body {
         width: 100%;
         min-height: 100vh;
+        background: #0f1115;
         background-color: #0f1115;
         color: var(--text-primary);
         font-family:
@@ -39,10 +40,11 @@
         -webkit-font-smoothing: antialiased;
         overflow-x: hidden;
         position: relative;
+        overscroll-behavior-y: none;
       }
 
       /* =====================================================================
-         1. SIMPLE WALLPAPER (subtle, low-contrast backdrop for glass)
+         1. SIMPLE WALLPAPER (subtle gray backdrop for glass)
          ===================================================================== */
       #wallpaper-scene {
         position: absolute;
@@ -54,7 +56,7 @@
         z-index: 0;
         overflow: hidden;
         pointer-events: none;
-        background: linear-gradient(180deg, #141820 0%, #0f1115 100%);
+        background: #0f1115;
       }
 
       .wp-orb {
@@ -366,6 +368,16 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
+        transition:
+          transform 0.22s var(--spring-bounce),
+          background 0.25s ease,
+          opacity 0.25s ease,
+          box-shadow 0.25s ease;
+      }
+
+      .apple-btn:active {
+        transform: scale(0.96);
+        background: rgba(255, 255, 255, 0.12);
       }
 
       .apple-btn > span {
@@ -373,7 +385,7 @@
       }
 
       .apple-btn:active > span {
-        transform: scale(0.9);
+        transform: scale(0.98);
       }
 
       /* Primary Stream Action Button — Liquid Glass Lens */
@@ -397,8 +409,16 @@
         gap: 10px;
         cursor: pointer;
         transition:
+          transform 0.22s var(--spring-bounce),
           opacity 0.25s var(--spring-out),
-          border-color 0.25s ease;
+          border-color 0.25s ease,
+          background 0.25s ease,
+          box-shadow 0.25s ease;
+      }
+
+      .primary-stream-btn:active:not(:disabled):not(.disabled) {
+        transform: scale(0.985);
+        background: rgba(255, 255, 255, 0.14);
       }
 
       .primary-stream-btn.streaming {
@@ -447,6 +467,7 @@
         border-radius: 18px;
         background: rgba(255, 255, 255, 0.07);
         border: 1px solid rgba(255, 255, 255, 0.14);
+        transition: background 0.25s ease, transform 0.2s var(--spring-out);
       }
 
       .endpoint-meta {
@@ -480,16 +501,20 @@
         box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
         color: #ffffff;
         cursor: pointer;
-        transition: transform 0.2s var(--spring-bounce);
+        transition:
+          transform 0.22s var(--spring-bounce),
+          background 0.25s ease,
+          border-color 0.25s ease,
+          opacity 0.25s ease;
       }
 
       .connect-pill:active {
-        transform: scale(0.92);
+        transform: scale(0.94);
       }
 
       .connect-pill.active {
-        background: rgba(48, 209, 88, 0.35);
-        border-color: rgba(110, 255, 145, 0.8);
+        background: rgba(52, 199, 89, 0.28);
+        border-color: rgba(52, 199, 89, 0.7);
       }
 
       /* Manual IPv4 + Port Row */
@@ -629,6 +654,11 @@
         border: 1px solid rgba(255, 255, 255, 0.12);
         cursor: pointer;
         touch-action: manipulation;
+        transition: background 0.25s ease, transform 0.18s ease;
+      }
+
+      .toggle-row:active {
+        background: rgba(255, 255, 255, 0.09);
       }
 
       .toggle-copy {
@@ -652,39 +682,39 @@
 
       .ios-switch {
         position: relative;
-        width: 58px;
-        height: 34px;
+        width: 51px;
+        height: 31px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.16);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.22);
+        background: rgba(120, 120, 128, 0.32);
+        border: none;
+        box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
         flex-shrink: 0;
         cursor: pointer;
         touch-action: none;
         transition:
-          background 0.25s ease,
-          border-color 0.25s ease;
+          background 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+          box-shadow 0.28s ease;
       }
 
       .ios-switch.on {
         background: #34c759;
-        border-color: rgba(52, 199, 89, 0.9);
+        box-shadow: none;
       }
 
-      /* The Liquid Glass Switch Thumb (.liquidGL) */
+      /* The Switch Thumb */
       .ios-switch-thumb {
         position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 28px;
-        height: 28px;
+        top: 2px;
+        left: 2px;
+        width: 27px;
+        height: 27px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.16);
-        border: 1.4px solid rgba(255, 255, 255, 0.88);
+        background: #ffffff;
+        border: none;
         box-shadow:
-          0 3px 12px rgba(0, 0, 0, 0.22),
-          inset 0 1.5px 2px rgba(255, 255, 255, 0.98),
-          inset 0 -1px 1px rgba(255, 255, 255, 0.2);
+          0 3px 8px rgba(0, 0, 0, 0.15),
+          0 1px 1px rgba(0, 0, 0, 0.16),
+          0 3px 1px rgba(0, 0, 0, 0.1);
         pointer-events: none !important;
       }
     </style>
@@ -1324,27 +1354,27 @@
         let animRaf = null;
 
         function renderSwitchThumb() {
-          // Track is 58px wide, 34px tall.
-          // Thumb at rest: 28x28px. When pressed/moving: stretches up to 38x28px liquid droplet!
-          const motionStretch = Math.min(10, Math.abs(posVel) * 55);
-          const pressStretch = currentPress * 8;
-          const w = 28 + Math.max(motionStretch, pressStretch);
-          const h = 28 + currentPress * 2;
+          // iOS-like switch: 51x31 track, 27x27 thumb, 2px inset
+          const trackW = 51;
+          const trackH = 31;
+          const pad = 2;
+          const base = 27;
+          const motionStretch = Math.min(8, Math.abs(posVel) * 45);
+          const pressStretch = currentPress * 6;
+          const w = base + Math.max(motionStretch, pressStretch);
+          const h = base + currentPress * 1.5;
 
-          const minLeft = 3;
-          const maxLeft = 58 - 3 - w;
-          const clampedPos = Math.min(1.06, Math.max(-0.06, currentPos));
+          const minLeft = pad;
+          const maxLeft = trackW - pad - w;
+          const clampedPos = Math.min(1.02, Math.max(-0.02, currentPos));
           const leftPx = minLeft + clampedPos * (maxLeft - minLeft);
-          const topPx = (34 - h) / 2;
+          const topPx = (trackH - h) / 2;
 
           thumb.style.width = `${w.toFixed(1)}px`;
           thumb.style.height = `${h.toFixed(1)}px`;
           thumb.style.left = `${leftPx.toFixed(1)}px`;
           thumb.style.top = `${topPx.toFixed(1)}px`;
-          thumb.style.background =
-            currentPress > 0.1 || Math.abs(posVel) > 0.02
-              ? "rgba(255, 255, 255, 0.08)"
-              : "rgba(255, 255, 255, 0.16)";
+          thumb.style.background = "#ffffff";
 
           sw.classList.toggle("on", currentPos >= 0.5);
           triggerLiquidGLRender();
@@ -1410,7 +1440,7 @@
           if (Math.abs(dx) > 6) {
             dragged = true;
             const swRect = sw.getBoundingClientRect();
-            const ratio = (e.clientX - swRect.left) / (swRect.width || 58);
+            const ratio = (e.clientX - swRect.left) / (swRect.width || 51);
             targetPos = Math.min(1, Math.max(0, ratio));
             ensureAnimating();
           }

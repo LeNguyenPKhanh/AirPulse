@@ -10,40 +10,32 @@ struct AirPulseLaunchOverlay: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.08, green: 0.22, blue: 0.48),
-                    Color(red: 0.16, green: 0.14, blue: 0.42),
-                    Color(red: 0.07, green: 0.16, blue: 0.34)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            Color(red: 0.059, green: 0.067, blue: 0.082)
+                .ignoresSafeArea()
 
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 0.22, green: 0.78, blue: 1.0).opacity(0.52), .clear],
+                        colors: [Color.white.opacity(0.08), .clear],
                         center: .center,
                         startRadius: 10,
-                        endRadius: 210
+                        endRadius: 220
                     )
                 )
-                .frame(width: 380, height: 380)
-                .offset(x: -75, y: -160)
+                .frame(width: 360, height: 360)
+                .offset(x: -60, y: -140)
 
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 1.0, green: 0.46, blue: 0.56).opacity(0.45), .clear],
+                        colors: [Color.white.opacity(0.05), .clear],
                         center: .center,
                         startRadius: 10,
-                        endRadius: 210
+                        endRadius: 220
                     )
                 )
-                .frame(width: 380, height: 380)
-                .offset(x: 85, y: 150)
+                .frame(width: 360, height: 360)
+                .offset(x: 70, y: 160)
 
             VStack(spacing: 24) {
                 ZStack {
@@ -79,16 +71,7 @@ struct AirPulseLaunchOverlay: View {
 
                     Image(systemName: "waveform.circle.fill")
                         .font(.system(size: 38, weight: .medium))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.96, green: 0.96, blue: 0.97),
-                                    Color(red: 0.72, green: 0.88, blue: 1.0)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
+                        .foregroundStyle(Color.white.opacity(0.92))
                 }
 
                 VStack(spacing: 6) {
@@ -151,9 +134,10 @@ struct LiquidGLWebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
 
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.09, green: 0.20, blue: 0.44, alpha: 1.0)
-        webView.scrollView.backgroundColor = .clear
+        let bg = UIColor(red: 15.0/255.0, green: 17.0/255.0, blue: 21.0/255.0, alpha: 1.0)
+        webView.isOpaque = true
+        webView.backgroundColor = bg
+        webView.scrollView.backgroundColor = bg
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
