@@ -207,9 +207,11 @@
         color: #ffffff;
         padding: 8px 15px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        box-shadow:
+          inset 0 1px 1px rgba(255, 255, 255, 0.7),
+          0 4px 12px rgba(0, 0, 0, 0.12);
       }
 
       .status-dot {
@@ -228,16 +230,19 @@
         box-shadow: 0 0 8px rgba(90, 200, 250, 0.85);
       }
 
-      /* Clean Native iOS Matte Cards (No heavy WebGL lens on big frames!) */
+      /* iOS 26-style translucent glass cards (CSS blur, no WebGL on large frames) */
       .glass-card {
         position: relative;
         width: 100%;
         border-radius: 28px;
-        background: rgba(19, 27, 46, 0.58);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.28);
         box-shadow:
-          0 12px 28px rgba(0, 0, 0, 0.22),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          0 8px 32px rgba(0, 0, 0, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.45),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(28px) saturate(160%);
+        -webkit-backdrop-filter: blur(28px) saturate(160%);
       }
 
       .card-inner {
@@ -395,9 +400,11 @@
       .apple-btn {
         position: relative;
         appearance: none;
-        background: rgba(255, 255, 255, 0.14);
-        border: 1px solid rgba(255, 255, 255, 0.42);
-        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          inset 0 1px 1.5px rgba(255, 255, 255, 0.75),
+          0 4px 10px rgba(0, 0, 0, 0.1);
         color: #ffffff;
         border-radius: 999px;
         padding: 7px 16px;
@@ -425,9 +432,11 @@
         width: 100%;
         height: 54px;
         border-radius: 27px;
-        background: rgba(255, 255, 255, 0.16);
-        border: 1.2px solid rgba(255, 255, 255, 0.48);
-        box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1.2px solid rgba(255, 255, 255, 0.45);
+        box-shadow:
+          inset 0 1.5px 2px rgba(255, 255, 255, 0.8),
+          0 6px 18px rgba(0, 0, 0, 0.12);
         color: #ffffff;
         font-size: 15.5px;
         font-weight: 700;
@@ -647,12 +656,12 @@
         width: 32px;
         height: 26px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.22);
-        border: 1.4px solid rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.14);
+        border: 1.4px solid rgba(255, 255, 255, 0.8);
         box-shadow:
-          0 4px 14px rgba(0, 0, 0, 0.32),
-          inset 0 1.5px 2px rgba(255, 255, 255, 0.92),
-          inset 0 -1px 2px rgba(0, 0, 0, 0.18);
+          0 4px 16px rgba(0, 0, 0, 0.22),
+          inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+          inset 0 -1px 2px rgba(255, 255, 255, 0.15);
         pointer-events: none !important;
       }
 
@@ -726,11 +735,12 @@
         width: 28px;
         height: 28px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.25);
-        border: 1.4px solid rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.16);
+        border: 1.4px solid rgba(255, 255, 255, 0.88);
         box-shadow:
-          0 3px 10px rgba(0, 0, 0, 0.3),
-          inset 0 1.5px 2px rgba(255, 255, 255, 0.95);
+          0 3px 12px rgba(0, 0, 0, 0.22),
+          inset 0 1.5px 2px rgba(255, 255, 255, 0.98),
+          inset 0 -1px 1px rgba(255, 255, 255, 0.2);
         pointer-events: none !important;
       }
     </style>
@@ -1070,11 +1080,11 @@
             snapshot: "body",
             content: false,
             resolution: 1.75,
-            refraction: 0.078,
-            aberration: 0.52,
-            bevelDepth: 0.21,
-            bevelWidth: 0.26,
-            frost: 0.05,
+            refraction: 0.085,
+            aberration: 0.42,
+            bevelDepth: 0.18,
+            bevelWidth: 0.22,
+            frost: 0.12,
             shadow: false,
             specular: true,
             reveal: "none",
@@ -1084,8 +1094,8 @@
             interactionStrength: 0.9,
             interactionRadius: 0.6,
             interactionViscosity: 0.55,
-            magnify: 1.22,
-            tint: "rgba(255, 255, 255, 0.08)",
+            magnify: 1.18,
+            tint: "rgba(255, 255, 255, 0.12)",
             helper: false,
             on: {
               init() {
@@ -1231,8 +1241,8 @@
           knob.style.top = `${topPx.toFixed(1)}px`;
           knob.style.background =
             currentPress > 0.15
-              ? `rgba(255, 255, 255, ${(0.22 - currentPress * 0.14).toFixed(2)})`
-              : "rgba(255, 255, 255, 0.24)";
+              ? `rgba(255, 255, 255, ${(0.14 - currentPress * 0.1).toFixed(2)})`
+              : "rgba(255, 255, 255, 0.14)";
 
           triggerLiquidGLRender();
         }
@@ -1389,8 +1399,8 @@
           thumb.style.top = `${topPx.toFixed(1)}px`;
           thumb.style.background =
             currentPress > 0.1 || Math.abs(posVel) > 0.02
-              ? "rgba(255, 255, 255, 0.12)"
-              : "rgba(255, 255, 255, 0.28)";
+              ? "rgba(255, 255, 255, 0.08)"
+              : "rgba(255, 255, 255, 0.16)";
 
           sw.classList.toggle("on", currentPos >= 0.5);
           triggerLiquidGLRender();
