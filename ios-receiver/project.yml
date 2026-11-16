@@ -14,8 +14,6 @@ targets:
       - path: PCAudioReceiver
         excludes:
           - "Resources/**"
-      - path: PCAudioReceiver/Resources
-        buildPhase: resources
     info:
       path: PCAudioReceiver/Info.plist
       properties:

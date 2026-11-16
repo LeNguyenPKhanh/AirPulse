@@ -135,11 +135,8 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
 
     func registerEndpoint(_ endpoint: DiscoveredPcEndpoint) {
         let now = CFAbsoluteTimeGetCurrent()
-        onEndpointSeen?(endpoint)
 
         DispatchQueue.main.async {
-            self.lastSeenTimestamps[endpoint.id] = now
-
             func score(_ ep: DiscoveredPcEndpoint) -> Int {
                 switch ep.source {
                 case "UDP Probe": return 4
@@ -150,29 +147,35 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
                 }
             }
 
-            // Update exact same endpoint (same IP:port)
-            if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
-                self.discoveredEndpoints[idx] = endpoint
-                self.collapseEndpointsForSamePc(preferredId: endpoint.id)
-                return
-            }
+            self.lastSeenTimestamps[endpoint.id] = now
 
-            // If same PC (by name) already listed with a different interface/IP, keep only the best one
-            let samePcIdx = self.discoveredEndpoints.firstIndex {
+            let keyMatches: (DiscoveredPcEndpoint) -> Bool = {
                 $0.name.caseInsensitiveCompare(endpoint.name) == .orderedSame && $0.port == endpoint.port
             }
-            if let idx = samePcIdx {
+
+            if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
+                // Same IP:port seen again
+                self.discoveredEndpoints[idx] = endpoint
+            } else if let idx = self.discoveredEndpoints.firstIndex(where: keyMatches) {
+                // Same PC, different interface/IP: keep only the most stable/reliable one
                 let existing = self.discoveredEndpoints[idx]
-                if score(endpoint) >= score(existing) {
+                if score(endpoint) > score(existing) {
                     self.lastSeenTimestamps.removeValue(forKey: existing.id)
                     self.discoveredEndpoints[idx] = endpoint
+                } else {
+                    // Drop noisier/less stable duplicate; keep existing
+                    self.lastSeenTimestamps.removeValue(forKey: endpoint.id)
                 }
-                self.collapseEndpointsForSamePc(preferredId: self.discoveredEndpoints[idx].id)
             } else {
                 self.discoveredEndpoints.append(endpoint)
                 self.bluetoothStateText = "Discovered \(endpoint.name) on Local Network"
-                self.collapseEndpointsForSamePc(preferredId: endpoint.id)
             }
+
+            self.collapseEndpointsForSamePc()
+
+            // Notify only with the chosen endpoint for this PC to avoid UI/IP flicker
+            let effective = self.discoveredEndpoints.first(where: keyMatches) ?? endpoint
+            self.onEndpointSeen?(effective)
         }
     }
 
