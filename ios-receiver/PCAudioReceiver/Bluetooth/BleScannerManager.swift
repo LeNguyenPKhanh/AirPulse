@@ -139,15 +139,69 @@ final class BleScannerManager: NSObject, ObservableObject, CBCentralManagerDeleg
 
         DispatchQueue.main.async {
             self.lastSeenTimestamps[endpoint.id] = now
+
+            func score(_ ep: DiscoveredPcEndpoint) -> Int {
+                switch ep.source {
+                case "UDP Probe": return 4
+                case "Wi-Fi Beacon": return 3
+                case "BLE GATT": return 2
+                case "BLE": return 1
+                default: return 0
+                }
+            }
+
+            // Update exact same endpoint (same IP:port)
             if let idx = self.discoveredEndpoints.firstIndex(where: { $0.id == endpoint.id }) {
-                if self.discoveredEndpoints[idx].name != endpoint.name {
+                self.discoveredEndpoints[idx] = endpoint
+                self.collapseEndpointsForSamePc(preferredId: endpoint.id)
+                return
+            }
+
+            // If same PC (by name) already listed with a different interface/IP, keep only the best one
+            let samePcIdx = self.discoveredEndpoints.firstIndex {
+                $0.name.caseInsensitiveCompare(endpoint.name) == .orderedSame && $0.port == endpoint.port
+            }
+            if let idx = samePcIdx {
+                let existing = self.discoveredEndpoints[idx]
+                if score(endpoint) >= score(existing) {
+                    self.lastSeenTimestamps.removeValue(forKey: existing.id)
                     self.discoveredEndpoints[idx] = endpoint
                 }
+                self.collapseEndpointsForSamePc(preferredId: self.discoveredEndpoints[idx].id)
             } else {
                 self.discoveredEndpoints.append(endpoint)
                 self.bluetoothStateText = "Discovered \(endpoint.name) on Local Network"
+                self.collapseEndpointsForSamePc(preferredId: endpoint.id)
             }
         }
+    }
+
+    private func collapseEndpointsForSamePc(preferredId: String? = nil) {
+        func score(_ ep: DiscoveredPcEndpoint) -> Int {
+            switch ep.source {
+            case "UDP Probe": return 4
+            case "Wi-Fi Beacon": return 3
+            case "BLE GATT": return 2
+            case "BLE": return 1
+            default: return 0
+            }
+        }
+        var bestByKey: [String: DiscoveredPcEndpoint] = [:]
+        for ep in discoveredEndpoints {
+            let key = "\(ep.name.lowercased())|\(ep.port)"
+            if let cur = bestByKey[key] {
+                let better = score(ep) > score(cur) || (score(ep) == score(cur) && ep.id == preferredId)
+                if better {
+                    lastSeenTimestamps.removeValue(forKey: cur.id)
+                    bestByKey[key] = ep
+                } else {
+                    lastSeenTimestamps.removeValue(forKey: ep.id)
+                }
+            } else {
+                bestByKey[key] = ep
+            }
+        }
+        discoveredEndpoints = Array(bestByKey.values).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func startStaleEndpointPruneTimer() {
