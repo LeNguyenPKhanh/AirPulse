@@ -31,7 +31,7 @@
       body {
         width: 100%;
         min-height: 100vh;
-        background-color: #101c38;
+        background-color: #0f1115;
         color: var(--text-primary);
         font-family:
           -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
@@ -42,9 +42,7 @@
       }
 
       /* =====================================================================
-         1. APPLE iOS 26 SPATIAL WALLPAPER
-         Rich, balanced Apple Aurora mesh + flowing silk waves so every button,
-         slider thumb, and toggle switch visibly bends & warps the background.
+         1. SIMPLE WALLPAPER (subtle, low-contrast backdrop for glass)
          ===================================================================== */
       #wallpaper-scene {
         position: absolute;
@@ -56,79 +54,35 @@
         z-index: 0;
         overflow: hidden;
         pointer-events: none;
-        background: linear-gradient(
-          165deg,
-          #0f2447 0%,
-          #18224b 35%,
-          #261c4a 68%,
-          #0d223f 100%
-        );
+        background: linear-gradient(180deg, #141820 0%, #0f1115 100%);
       }
 
       .wp-orb {
         position: absolute;
         border-radius: 50%;
+        opacity: 0.18;
       }
 
       .wp-orb-1 {
-        width: 380px;
-        height: 380px;
-        top: -40px;
-        left: -70px;
-        background: radial-gradient(
-          circle,
-          rgba(56, 189, 248, 0.55) 0%,
-          rgba(37, 99, 235, 0.24) 48%,
-          rgba(37, 99, 235, 0) 74%
-        );
+        width: 420px;
+        height: 420px;
+        top: -80px;
+        left: -120px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
       }
 
       .wp-orb-2 {
-        width: 400px;
-        height: 400px;
-        top: 140px;
-        right: -100px;
-        background: radial-gradient(
-          circle,
-          rgba(244, 114, 182, 0.48) 0%,
-          rgba(168, 85, 247, 0.24) 48%,
-          rgba(168, 85, 247, 0) 74%
-        );
+        width: 360px;
+        height: 360px;
+        top: 220px;
+        right: -140px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
       }
 
-      .wp-orb-3 {
-        width: 420px;
-        height: 420px;
-        top: 420px;
-        left: -90px;
-        background: radial-gradient(
-          circle,
-          rgba(99, 102, 241, 0.5) 0%,
-          rgba(45, 212, 191, 0.24) 50%,
-          rgba(45, 212, 191, 0) 75%
-        );
-      }
-
-      .wp-orb-4 {
-        width: 390px;
-        height: 390px;
-        bottom: 30px;
-        right: -80px;
-        background: radial-gradient(
-          circle,
-          rgba(52, 211, 153, 0.45) 0%,
-          rgba(56, 189, 248, 0.22) 48%,
-          rgba(56, 189, 248, 0) 74%
-        );
-      }
-
+      .wp-orb-3,
+      .wp-orb-4,
       .wp-ribbons-svg {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
+        display: none;
       }
 
       /* =====================================================================
@@ -280,13 +234,9 @@
         height: 48px;
         border-radius: 15px;
         flex-shrink: 0;
-        background: linear-gradient(
-          135deg,
-          rgba(56, 189, 248, 0.42),
-          rgba(168, 85, 247, 0.42)
-        );
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -452,7 +402,7 @@
       }
 
       .primary-stream-btn.streaming {
-        border-color: rgba(74, 222, 128, 0.85);
+        border-color: rgba(52, 199, 89, 0.85);
       }
 
       .primary-stream-btn:disabled,
@@ -618,20 +568,14 @@
         touch-action: none;
       }
 
-      /* Colorful track captured in liquidGL snapshot so the Liquid Glass thumb
-         visibly bends and magnifies the track edges as you slide it! */
+      /* Track captured in liquidGL snapshot so the thumb refracts it */
       .elastic-track {
         position: relative;
         width: 100%;
         height: 12px;
         border-radius: 999px;
-        background: linear-gradient(
-          90deg,
-          rgba(56, 189, 248, 0.32),
-          rgba(168, 85, 247, 0.35),
-          rgba(244, 114, 182, 0.38)
-        );
-        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.22);
         overflow: hidden;
       }
 
@@ -642,8 +586,8 @@
         bottom: 0;
         width: 50%;
         border-radius: 999px;
-        background: linear-gradient(90deg, #38bdf8, #a855f7, #f472b6);
-        box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: none;
       }
 
       /* The Liquid Glass Slider Thumb (.liquidGL)
@@ -723,8 +667,8 @@
       }
 
       .ios-switch.on {
-        background: linear-gradient(90deg, #22c55e, #34d399);
-        border-color: rgba(134, 239, 172, 0.85);
+        background: #34c759;
+        border-color: rgba(52, 199, 89, 0.9);
       }
 
       /* The Liquid Glass Switch Thumb (.liquidGL) */
