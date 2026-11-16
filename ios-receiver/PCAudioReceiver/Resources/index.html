@@ -6,13 +6,13 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>AirPulse — iOS 26 Liquid Glass</title>
+    <title>AirPulse — iOS Liquid Glass</title>
     <style>
       :root {
         --text-primary: #ffffff;
-        --text-secondary: rgba(255, 255, 255, 0.82);
-        --text-tertiary: rgba(255, 255, 255, 0.58);
-        --accent-mint: #34c759;
+        --text-secondary: rgba(255, 255, 255, 0.76);
+        --text-tertiary: rgba(255, 255, 255, 0.5);
+        --accent-mint: #30d158;
         --accent-cyan: #5ac8fa;
         --spring-out: cubic-bezier(0.22, 1, 0.36, 1);
         --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -31,7 +31,7 @@
       body {
         width: 100%;
         min-height: 100vh;
-        background-color: #163772;
+        background-color: #101c38;
         color: var(--text-primary);
         font-family:
           -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
@@ -42,9 +42,9 @@
       }
 
       /* =====================================================================
-         1. APPLE iOS 26 SPATIAL WALLPAPER SCENE (Snapshot Target for liquidGL)
-         Luminous, multi-layered colorful aurora + 3D SVG ribbons so liquidGL
-         refracts, magnifies, and warps vibrant colours along every glass bevel!
+         1. APPLE iOS 26 SPATIAL WALLPAPER
+         Rich, balanced Apple Aurora mesh + flowing silk waves so every button,
+         slider thumb, and toggle switch visibly bends & warps the background.
          ===================================================================== */
       #wallpaper-scene {
         position: absolute;
@@ -57,11 +57,11 @@
         overflow: hidden;
         pointer-events: none;
         background: linear-gradient(
-          160deg,
-          #124596 0%,
-          #1f2f82 30%,
-          #47277d 62%,
-          #133d6e 100%
+          165deg,
+          #0f2447 0%,
+          #18224b 35%,
+          #261c4a 68%,
+          #0d223f 100%
         );
       }
 
@@ -71,54 +71,54 @@
       }
 
       .wp-orb-1 {
-        width: 390px;
-        height: 390px;
-        top: -50px;
-        left: -80px;
+        width: 380px;
+        height: 380px;
+        top: -40px;
+        left: -70px;
         background: radial-gradient(
           circle,
-          rgba(0, 225, 255, 0.82) 0%,
-          rgba(0, 168, 255, 0.38) 45%,
-          rgba(0, 168, 255, 0) 74%
+          rgba(56, 189, 248, 0.55) 0%,
+          rgba(37, 99, 235, 0.24) 48%,
+          rgba(37, 99, 235, 0) 74%
         );
       }
 
       .wp-orb-2 {
-        width: 420px;
-        height: 420px;
-        top: 110px;
-        right: -110px;
+        width: 400px;
+        height: 400px;
+        top: 140px;
+        right: -100px;
         background: radial-gradient(
           circle,
-          rgba(255, 107, 129, 0.85) 0%,
-          rgba(255, 159, 67, 0.42) 46%,
-          rgba(255, 107, 129, 0) 74%
+          rgba(244, 114, 182, 0.48) 0%,
+          rgba(168, 85, 247, 0.24) 48%,
+          rgba(168, 85, 247, 0) 74%
         );
       }
 
       .wp-orb-3 {
-        width: 440px;
-        height: 440px;
-        top: 390px;
-        left: -100px;
+        width: 420px;
+        height: 420px;
+        top: 420px;
+        left: -90px;
         background: radial-gradient(
           circle,
-          rgba(165, 94, 234, 0.82) 0%,
-          rgba(72, 219, 251, 0.4) 48%,
-          rgba(72, 219, 251, 0) 75%
+          rgba(99, 102, 241, 0.5) 0%,
+          rgba(45, 212, 191, 0.24) 50%,
+          rgba(45, 212, 191, 0) 75%
         );
       }
 
       .wp-orb-4 {
-        width: 410px;
-        height: 410px;
-        bottom: 40px;
-        right: -90px;
+        width: 390px;
+        height: 390px;
+        bottom: 30px;
+        right: -80px;
         background: radial-gradient(
           circle,
-          rgba(46, 213, 115, 0.72) 0%,
-          rgba(0, 210, 211, 0.36) 46%,
-          rgba(0, 210, 211, 0) 74%
+          rgba(52, 211, 153, 0.45) 0%,
+          rgba(56, 189, 248, 0.22) 48%,
+          rgba(56, 189, 248, 0) 74%
         );
       }
 
@@ -132,7 +132,8 @@
       }
 
       /* =====================================================================
-         2. FOREGROUND STAGE & APPLE iOS 26 LIQUID GLASS CONTAINERS
+         2. MAIN STAGE & NATIVE iOS CARDS (Cards do NOT use WebGL liquidGL,
+            keeping scrolling at 120Hz; ONLY buttons, thumbs & switches use liquidGL!)
          ===================================================================== */
       .app-stage {
         position: relative;
@@ -140,10 +141,10 @@
         max-width: 430px;
         margin: 0 auto;
         padding: calc(env(safe-area-inset-top, 44px) + 10px) 16px
-          calc(env(safe-area-inset-bottom, 24px) + 34px) 16px;
+          calc(env(safe-area-inset-bottom, 24px) + 32px) 16px;
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 14px;
       }
 
       .liquidGL {
@@ -155,7 +156,7 @@
         z-index: 2;
       }
 
-      /* Floating iOS 26 Top Bar */
+      /* Top Apple Header */
       .top-bar {
         display: flex;
         align-items: center;
@@ -173,15 +174,9 @@
         width: 34px;
         height: 34px;
         border-radius: 11px;
-        background: linear-gradient(
-          145deg,
-          rgba(255, 255, 255, 0.34),
-          rgba(255, 255, 255, 0.1)
-        );
-        border: 1px solid rgba(255, 255, 255, 0.42);
-        box-shadow:
-          0 4px 14px rgba(0, 0, 0, 0.16),
-          inset 0 1px 1px rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -198,11 +193,11 @@
         font-weight: 700;
         letter-spacing: -0.028em;
         color: #ffffff;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
       }
 
-      /* Floating Codec Status Capsule */
+      /* Liquid Glass Codec Status Pill */
       .codec-pill {
+        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 7px;
@@ -210,11 +205,11 @@
         font-weight: 600;
         letter-spacing: -0.01em;
         color: #ffffff;
-        padding: 7px 14px;
+        padding: 8px 15px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.12);
         border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
       }
 
       .status-dot {
@@ -222,7 +217,7 @@
         height: 8px;
         border-radius: 50%;
         background: var(--accent-mint);
-        box-shadow: 0 0 10px rgba(52, 199, 89, 0.95);
+        box-shadow: 0 0 10px rgba(48, 209, 88, 0.95);
         transition:
           background 0.35s var(--spring-out),
           box-shadow 0.35s var(--spring-out);
@@ -233,19 +228,21 @@
         box-shadow: 0 0 8px rgba(90, 200, 250, 0.85);
       }
 
-      /* Primary iOS 26 Liquid Glass Pane */
+      /* Clean Native iOS Matte Cards (No heavy WebGL lens on big frames!) */
       .glass-card {
         position: relative;
         width: 100%;
-        border-radius: 32px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.32);
+        border-radius: 28px;
+        background: rgba(19, 27, 46, 0.58);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow:
+          0 12px 28px rgba(0, 0, 0, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
       }
 
       .card-inner {
         position: relative;
-        z-index: 2;
-        padding: 20px 18px;
+        padding: 18px 18px;
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -259,9 +256,9 @@
       }
 
       .eyebrow {
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 700;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.09em;
         text-transform: uppercase;
         color: var(--text-tertiary);
       }
@@ -270,34 +267,30 @@
       .hero-header-row {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 13px;
       }
 
       .hero-artwork-orb {
-        width: 52px;
-        height: 52px;
-        border-radius: 17px;
+        width: 48px;
+        height: 48px;
+        border-radius: 15px;
         flex-shrink: 0;
         background: linear-gradient(
           135deg,
-          rgba(90, 200, 250, 0.48),
-          rgba(165, 94, 234, 0.45),
-          rgba(255, 107, 129, 0.48)
+          rgba(56, 189, 248, 0.42),
+          rgba(168, 85, 247, 0.42)
         );
-        border: 1px solid rgba(255, 255, 255, 0.45);
-        box-shadow:
-          0 6px 18px rgba(0, 0, 0, 0.18),
-          inset 0 1px 2px rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .hero-artwork-orb svg {
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
         fill: #ffffff;
-        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
       }
 
       .hero-status {
@@ -308,7 +301,7 @@
       }
 
       .hero-headline {
-        font-size: 20px;
+        font-size: 19.5px;
         font-weight: 700;
         letter-spacing: -0.025em;
         line-height: 1.2;
@@ -328,35 +321,34 @@
         text-overflow: ellipsis;
       }
 
-      /* Smooth Acoustic Waveform Pill */
+      /* Smooth Acoustic Waveform */
       .waveform-wrap {
         position: relative;
         width: 100%;
-        height: 36px;
+        height: 34px;
         padding: 0 10px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.09);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         display: flex;
         align-items: center;
       }
 
       .waveform-svg {
         width: 100%;
-        height: 28px;
+        height: 26px;
         overflow: visible;
       }
 
       .waveform-svg path {
         fill: none;
         stroke: #ffffff;
-        stroke-width: 2.2;
+        stroke-width: 2.1;
         stroke-linecap: round;
         stroke-linejoin: round;
       }
 
-      /* 3-Pill Telemetry Row */
+      /* 3-Column Telemetry */
       .stat-trio {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -364,11 +356,10 @@
       }
 
       .stat-item {
-        padding: 10px 12px;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.11);
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+        padding: 9px 11px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         display: flex;
         flex-direction: column;
         gap: 2px;
@@ -376,14 +367,14 @@
 
       .stat-label {
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 600;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--text-tertiary);
       }
 
       .stat-value {
-        font-size: 15.5px;
+        font-size: 15px;
         font-weight: 700;
         letter-spacing: -0.02em;
         font-variant-numeric: tabular-nums;
@@ -392,23 +383,24 @@
 
       .stat-value small {
         font-size: 10.5px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--text-secondary);
         margin-left: 2px;
       }
 
-      /* Tactile iOS 26 Capsule Button */
+      /* =====================================================================
+         3. LIQUID GLASS BUTTONS (.liquidGL)
+            True optical bevel warping around every interactive button!
+         ===================================================================== */
       .apple-btn {
         position: relative;
         appearance: none;
-        background: rgba(255, 255, 255, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.38);
-        box-shadow:
-          0 4px 12px rgba(0, 0, 0, 0.12),
-          inset 0 1px 1px rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.65);
         color: #ffffff;
         border-radius: 999px;
-        padding: 6px 14px;
+        padding: 7px 16px;
         font-size: 12.5px;
         font-weight: 600;
         letter-spacing: -0.01em;
@@ -416,15 +408,68 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 5px;
-        transition:
-          transform 0.22s var(--spring-bounce),
-          background 0.2s ease;
+        gap: 6px;
       }
 
-      .apple-btn:active {
-        transform: scale(0.92);
-        background: rgba(255, 255, 255, 0.28);
+      .apple-btn > span {
+        transition: transform 0.2s var(--spring-bounce);
+      }
+
+      .apple-btn:active > span {
+        transform: scale(0.9);
+      }
+
+      /* Primary Stream Action Button — Liquid Glass Lens */
+      .primary-stream-btn {
+        position: relative;
+        width: 100%;
+        height: 54px;
+        border-radius: 27px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1.2px solid rgba(255, 255, 255, 0.48);
+        box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.72);
+        color: #ffffff;
+        font-size: 15.5px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        transition:
+          opacity 0.25s var(--spring-out),
+          border-color 0.25s ease;
+      }
+
+      .primary-stream-btn.streaming {
+        border-color: rgba(74, 222, 128, 0.85);
+      }
+
+      .primary-stream-btn:disabled,
+      .primary-stream-btn.disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+        pointer-events: none !important;
+      }
+
+      .primary-stream-btn .btn-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+        transition: transform 0.22s var(--spring-bounce);
+      }
+
+      .primary-stream-btn:active:not(:disabled):not(.disabled) .btn-inner {
+        transform: scale(0.94);
+      }
+
+      .primary-stream-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
       }
 
       /* Discovered PC List */
@@ -440,10 +485,9 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 14px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.26);
-        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
       }
 
       .endpoint-meta {
@@ -467,18 +511,17 @@
       }
 
       .connect-pill {
+        position: relative;
         padding: 7px 15px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 700;
         border: 1px solid rgba(255, 255, 255, 0.42);
-        background: rgba(255, 255, 255, 0.22);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
         color: #ffffff;
         cursor: pointer;
-        transition:
-          transform 0.22s var(--spring-bounce),
-          background 0.22s ease;
+        transition: transform 0.2s var(--spring-bounce);
       }
 
       .connect-pill:active {
@@ -486,12 +529,11 @@
       }
 
       .connect-pill.active {
-        background: rgba(52, 199, 89, 0.38);
-        border-color: rgba(120, 255, 155, 0.8);
-        color: #ffffff;
+        background: rgba(48, 209, 88, 0.35);
+        border-color: rgba(110, 255, 145, 0.8);
       }
 
-      /* Manual IPv4 + Port Capsules */
+      /* Manual IPv4 + Port Row */
       .input-row {
         display: grid;
         grid-template-columns: 1fr 92px;
@@ -500,17 +542,16 @@
 
       .input-shell {
         position: relative;
-        border-radius: 18px;
-        height: 44px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.32);
+        border-radius: 16px;
+        height: 42px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
       }
 
       .apple-input {
         width: 100%;
         height: 100%;
-        padding: 0 14px;
+        padding: 0 13px;
         border: none;
         background: transparent;
         color: #ffffff;
@@ -524,79 +565,19 @@
       }
 
       .apple-input::placeholder {
-        color: rgba(255, 255, 255, 0.45);
+        color: rgba(255, 255, 255, 0.4);
         font-weight: 500;
       }
 
-      /* Primary Stream Action Pill — Prominent iOS 26 Liquid Glass Button */
-      .primary-stream-btn {
-        position: relative;
-        width: 100%;
-        height: 52px;
-        border-radius: 26px;
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.28),
-          rgba(255, 255, 255, 0.14)
-        );
-        border: 1px solid rgba(255, 255, 255, 0.48);
-        box-shadow:
-          0 8px 22px rgba(0, 0, 0, 0.18),
-          inset 0 1px 2px rgba(255, 255, 255, 0.72);
-        color: #ffffff;
-        font-size: 15.5px;
-        font-weight: 700;
-        letter-spacing: -0.015em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        cursor: pointer;
-        transition:
-          opacity 0.28s var(--spring-out),
-          transform 0.24s var(--spring-bounce),
-          background 0.28s ease,
-          border-color 0.28s ease;
-      }
-
-      .primary-stream-btn.streaming {
-        background: linear-gradient(
-          135deg,
-          rgba(52, 199, 89, 0.46),
-          rgba(48, 209, 88, 0.24)
-        );
-        border-color: rgba(135, 255, 165, 0.75);
-      }
-
-      .primary-stream-btn:active:not(:disabled):not(.disabled) {
-        transform: scale(0.96);
-      }
-
-      .primary-stream-btn:disabled,
-      .primary-stream-btn.disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-        pointer-events: none !important;
-      }
-
-      .primary-stream-btn .btn-inner {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
-      }
-
-      .primary-stream-btn svg {
-        width: 18px;
-        height: 18px;
-        fill: currentColor;
-      }
-
-      /* iOS 26 Control Center Thick Capsule Sliders */
+      /* =====================================================================
+         4. iOS 26 LIQUID GLASS SLIDERS (Volume & Jitter)
+            Continuous 120fps spring physics + Liquid Glass Thumb (.liquidGL)
+            that swells into a clear refractive droplet when touched/dragged!
+         ===================================================================== */
       .slider-group {
         display: flex;
         flex-direction: column;
-        gap: 7px;
+        gap: 8px;
       }
 
       .slider-header {
@@ -626,21 +607,22 @@
         align-items: center;
         cursor: pointer;
         touch-action: none;
-        transition: transform 0.28s var(--spring-bounce);
       }
 
-      .elastic-slider.dragging {
-        transform: scaleY(1.08) scaleX(1.015);
-      }
-
+      /* Colorful track captured in liquidGL snapshot so the Liquid Glass thumb
+         visibly bends and magnifies the track edges as you slide it! */
       .elastic-track {
         position: relative;
         width: 100%;
-        height: 34px;
-        border-radius: 17px;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.26);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14);
+        height: 12px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(56, 189, 248, 0.32),
+          rgba(168, 85, 247, 0.35),
+          rgba(244, 114, 182, 0.38)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.28);
         overflow: hidden;
       }
 
@@ -650,39 +632,50 @@
         top: 0;
         bottom: 0;
         width: 50%;
-        border-radius: 16px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.38),
-          rgba(255, 255, 255, 0.68)
-        );
-        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75);
+        border-radius: 999px;
+        background: linear-gradient(90deg, #38bdf8, #a855f7, #f472b6);
+        box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
       }
 
-      .slider-icon {
+      /* The Liquid Glass Slider Thumb (.liquidGL)
+         Positioned via left/top/width/height (NOT transform) so liquidGL
+         tracks & refracts it at 120Hz without transform conflicts! */
+      .liquid-thumb {
         position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
-        fill: rgba(255, 255, 255, 0.9);
-        pointer-events: none;
-        z-index: 2;
+        top: 6px;
+        left: calc(50% - 16px);
+        width: 32px;
+        height: 26px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+        border: 1.4px solid rgba(255, 255, 255, 0.85);
+        box-shadow:
+          0 4px 14px rgba(0, 0, 0, 0.32),
+          inset 0 1.5px 2px rgba(255, 255, 255, 0.92),
+          inset 0 -1px 2px rgba(0, 0, 0, 0.18);
+        pointer-events: none !important;
       }
 
-      /* iOS 26 Settings Toggle Rows */
+      .liquid-thumb.active- droplet {
+        border-color: rgba(255, 255, 255, 0.96);
+      }
+
+      /* =====================================================================
+         5. iOS 26 LIQUID GLASS TOGGLE SWITCHES (Turn On / Off)
+            120fps spring physics + Liquid Glass Thumb (.liquidGL) that
+            stretches into a wide refractive droplet as it glides!
+         ===================================================================== */
       .toggle-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 14px;
         padding: 10px 12px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         cursor: pointer;
+        touch-action: manipulation;
       }
 
       .toggle-copy {
@@ -706,44 +699,45 @@
 
       .ios-switch {
         position: relative;
-        width: 51px;
-        height: 31px;
+        width: 58px;
+        height: 34px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.22);
         flex-shrink: 0;
+        cursor: pointer;
+        touch-action: none;
         transition:
-          background 0.28s var(--spring-out),
-          border-color 0.28s var(--spring-out);
+          background 0.25s ease,
+          border-color 0.25s ease;
       }
 
       .ios-switch.on {
-        background: rgba(52, 199, 89, 0.92);
-        border-color: rgba(140, 255, 170, 0.8);
+        background: linear-gradient(90deg, #22c55e, #34d399);
+        border-color: rgba(134, 239, 172, 0.85);
       }
 
+      /* The Liquid Glass Switch Thumb (.liquidGL) */
       .ios-switch-thumb {
         position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.26);
-        transition: transform 0.3s var(--spring-bounce);
-      }
-
-      .ios-switch.on .ios-switch-thumb {
-        transform: translateX(20px);
+        top: 3px;
+        left: 3px;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.25);
+        border: 1.4px solid rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 3px 10px rgba(0, 0, 0, 0.3),
+          inset 0 1.5px 2px rgba(255, 255, 255, 0.95);
+        pointer-events: none !important;
       }
     </style>
   </head>
   <body>
     <!-- ===================================================================
-         APPLE iOS 26 SPATIAL WALLPAPER SCENE (Captured by liquidGL)
-         Luminous ocean-sky-coral-violet waves & 3D petals so every glass
-         card visibly bends & refracts rich colours along its 3D bevels!
+         APPLE iOS 26 SPATIAL WALLPAPER SCENE
          =================================================================== -->
     <div id="wallpaper-scene">
       <div class="wp-orb wp-orb-1"></div>
@@ -759,54 +753,33 @@
       >
         <defs>
           <linearGradient id="waveA" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#48dbfb" stop-opacity="0.72" />
-            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.42" />
-            <stop offset="100%" stop-color="#ff6b81" stop-opacity="0.65" />
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.55" />
+            <stop offset="50%" stop-color="#e0f2fe" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#f472b6" stop-opacity="0.52" />
           </linearGradient>
           <linearGradient id="waveB" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#ff9f43" stop-opacity="0.68" />
-            <stop offset="50%" stop-color="#f368e0" stop-opacity="0.52" />
-            <stop offset="100%" stop-color="#0abde3" stop-opacity="0.70" />
+            <stop offset="0%" stop-color="#fb923c" stop-opacity="0.5" />
+            <stop offset="50%" stop-color="#c084fc" stop-opacity="0.42" />
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.55" />
           </linearGradient>
           <linearGradient id="waveC" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#1dd1a1" stop-opacity="0.66" />
-            <stop offset="50%" stop-color="#48dbfb" stop-opacity="0.52" />
-            <stop offset="100%" stop-color="#feca57" stop-opacity="0.64" />
+            <stop offset="0%" stop-color="#34d399" stop-opacity="0.5" />
+            <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.42" />
+            <stop offset="100%" stop-color="#a855f7" stop-opacity="0.5" />
           </linearGradient>
         </defs>
 
-        <!-- Flowing iOS 26 3D Silk Petals behind the cards -->
         <path
-          d="M-40,130 C110,40 280,230 470,110 L470,250 C290,340 120,170 -40,260 Z"
+          d="M-40,120 C110,35 280,220 470,105 L470,235 C290,320 120,160 -40,245 Z"
           fill="url(#waveA)"
         />
         <path
-          d="M-40,390 C140,280 290,490 470,360 L470,510 C280,610 130,420 -40,520 Z"
+          d="M-40,390 C140,280 290,485 470,360 L470,495 C280,595 130,415 -40,505 Z"
           fill="url(#waveB)"
         />
         <path
-          d="M-40,680 C120,580 300,770 470,650 L470,810 C300,900 130,720 -40,820 Z"
+          d="M-40,670 C120,570 300,760 470,640 L470,790 C300,880 130,710 -40,800 Z"
           fill="url(#waveC)"
-        />
-
-        <!-- Crisp Specular Highlight Curves that make bevel refraction pop -->
-        <path
-          d="M-30,132 C110,42 280,232 460,112"
-          fill="none"
-          stroke="rgba(255,255,255,0.62)"
-          stroke-width="3"
-        />
-        <path
-          d="M-30,392 C140,282 290,492 460,362"
-          fill="none"
-          stroke="rgba(255,255,255,0.55)"
-          stroke-width="3"
-        />
-        <path
-          d="M-30,682 C120,582 300,772 460,652"
-          fill="none"
-          stroke="rgba(255,255,255,0.55)"
-          stroke-width="3"
         />
       </svg>
     </div>
@@ -828,14 +801,15 @@
           <h1 class="brand-title">AirPulse</h1>
         </div>
 
+        <!-- Button/Pill 1: Liquid Glass Codec Pill -->
         <div class="codec-pill liquidGL" id="codec-badge-wrap">
           <span class="status-dot idle" id="status-orb"></span>
           <span id="codec-badge">PCM 48kHz</span>
         </div>
       </header>
 
-      <!-- Card 1: Live Audio Session & Waveform Lens -->
-      <section class="glass-card liquidGL" id="hero-lens">
+      <!-- Card 1: Live Audio Session (Clean Matte Card) -->
+      <section class="glass-card" id="hero-lens">
         <div class="card-inner">
           <div class="row-between">
             <span class="eyebrow">Live Audio Bridge</span>
@@ -863,10 +837,10 @@
           <div class="waveform-wrap">
             <svg
               class="waveform-svg"
-              viewBox="0 0 320 28"
+              viewBox="0 0 320 26"
               preserveAspectRatio="none"
             >
-              <path id="waveform-path" d="M0,14 L320,14"></path>
+              <path id="waveform-path" d="M0,13 L320,13"></path>
             </svg>
           </div>
 
@@ -889,12 +863,13 @@
         </div>
       </section>
 
-      <!-- Card 2: PC Auto-Discovery & Connection Lens -->
-      <section class="glass-card liquidGL">
+      <!-- Card 2: PC Auto-Discovery & Liquid Glass Action Buttons -->
+      <section class="glass-card">
         <div class="card-inner">
           <div class="row-between">
             <span class="eyebrow">PC Discovery &amp; Connection</span>
-            <button class="apple-btn" id="btn-rescan" type="button">
+            <!-- Button 2: Liquid Glass Rescan Button -->
+            <button class="apple-btn liquidGL" id="btn-rescan" type="button">
               <span>Rescan</span>
             </button>
           </div>
@@ -933,8 +908,9 @@
             </div>
           </div>
 
+          <!-- Button 3: Liquid Glass Primary Stream Button -->
           <button
-            class="primary-stream-btn disabled"
+            class="primary-stream-btn liquidGL disabled"
             id="btn-toggle-stream"
             type="button"
             disabled
@@ -951,8 +927,8 @@
         </div>
       </section>
 
-      <!-- Card 3: iOS 26 Control Center Acoustic Sliders Lens -->
-      <section class="glass-card liquidGL">
+      <!-- Card 3: Volume & Jitter Sliders with Liquid Glass Thumbs (.liquidGL) -->
+      <section class="glass-card">
         <div class="card-inner">
           <span class="eyebrow">Acoustic &amp; Buffer Tuning</span>
 
@@ -969,16 +945,13 @@
                   id="fill-volume"
                   style="width: 50%"
                 ></div>
-                <svg class="slider-icon" viewBox="0 0 24 24">
-                  <path
-                    d="M11 5L6 9H2v6h4l5 4V5zm4.5 7A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 1.5-3.5zm2.5 0a7 7 0 0 1-4 6.32v-2.16A5 5 0 0 0 16 12a5 5 0 0 0-2-4.16V5.68A7 7 0 0 1 18 12z"
-                  />
-                </svg>
               </div>
+              <!-- Liquid Glass Thumb for Volume -->
+              <div class="liquid-thumb liquidGL" id="knob-volume"></div>
             </div>
           </div>
 
-          <!-- Buffer Slider -->
+          <!-- Jitter Buffer Slider -->
           <div class="slider-group">
             <div class="slider-header">
               <span class="slider-title">Jitter Buffer Cushion</span>
@@ -989,21 +962,18 @@
                 <div
                   class="elastic-fill"
                   id="fill-buffer"
-                  style="width: 45%"
+                  style="width: 31.25%"
                 ></div>
-                <svg class="slider-icon" viewBox="0 0 24 24">
-                  <path
-                    d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2zm1 10.41l3.29 3.3-1.42 1.41L11 13V7h2z"
-                  />
-                </svg>
               </div>
+              <!-- Liquid Glass Thumb for Jitter Buffer -->
+              <div class="liquid-thumb liquidGL" id="knob-buffer"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Card 4: Dynamic Island, Lock Screen & Audio Mixing Lens -->
-      <section class="glass-card liquidGL">
+      <!-- Card 4: Turn On/Off Switches with Liquid Glass Thumbs (.liquidGL) -->
+      <section class="glass-card">
         <div class="card-inner">
           <span class="eyebrow">Dynamic Island, Lock Screen &amp; Mixing</span>
 
@@ -1016,7 +986,8 @@
               >
             </div>
             <div class="ios-switch" id="switch-mix">
-              <div class="ios-switch-thumb"></div>
+              <!-- Liquid Glass Thumb for Mix Switch -->
+              <div class="ios-switch-thumb liquidGL" id="thumb-mix"></div>
             </div>
           </div>
 
@@ -1028,7 +999,8 @@
               >
             </div>
             <div class="ios-switch" id="switch-duck">
-              <div class="ios-switch-thumb"></div>
+              <!-- Liquid Glass Thumb for Duck Switch -->
+              <div class="ios-switch-thumb liquidGL" id="thumb-duck"></div>
             </div>
           </div>
         </div>
@@ -1038,7 +1010,7 @@
     <!-- Official naughtyduk/liquidGL v3.0.0 Library -->
     <script src="liquidGL.js"></script>
     <script>
-      /* 1. Sync Wallpaper Height so scrolling always has rich colours behind every glass card */
+      /* 1. Sync Wallpaper Height */
       function syncWallpaperHeight() {
         const wp = document.getElementById("wallpaper-scene");
         if (!wp) return;
@@ -1065,15 +1037,25 @@
         }
       }
 
-      /* 3. Initialize Official naughtyduk/liquidGL ONCE on #wallpaper-scene
-            - Captures #wallpaper-scene (colorful orbs + 3D SVG ribbons)
-            - Applies real-time optical refraction, 3D bevel depth, chromatic aberration,
-              specular edge highlights, 3D touch tilt, and fluid touch ripples at 120Hz! */
+      /* 3. Initialize Official naughtyduk/liquidGL ONLY on Buttons, Slider Thumbs & Switch Thumbs!
+            - Snapshot is "body" so the slider tracks, switch tracks, cards, and wallpaper
+              are all captured into the WebGL texture and refracted/warped inside every
+              button, slider thumb, and toggle switch thumb as they move!
+            - tilt: false eliminates CPU 2D mirror canvas copies so everything runs at 120Hz! */
       let notifiedReady = false;
       function signalReadyOnce() {
         if (notifiedReady) return;
         notifiedReady = true;
         postToNative({ action: "ready" });
+      }
+
+      function triggerLiquidGLRender() {
+        if (
+          window.__liquidGLRenderer__ &&
+          typeof window.__liquidGLRenderer__.render === "function"
+        ) {
+          window.__liquidGLRenderer__.render();
+        }
       }
 
       function initLiquidGLOnce() {
@@ -1085,26 +1067,24 @@
         try {
           window.liquidGL({
             target: ".liquidGL",
-            snapshot: "#wallpaper-scene",
+            snapshot: "body",
             content: false,
-            resolution: 1.5,
-            refraction: 0.052,
-            aberration: 0.35,
-            bevelDepth: 0.095,
-            bevelWidth: 0.165,
-            frost: 0.55,
-            shadow: true,
+            resolution: 1.75,
+            refraction: 0.078,
+            aberration: 0.52,
+            bevelDepth: 0.21,
+            bevelWidth: 0.26,
+            frost: 0.05,
+            shadow: false,
             specular: true,
             reveal: "none",
-            tilt: true,
-            tiltFactor: 3.2,
-            tiltEase: 350,
+            tilt: false,
             draggable: false,
             interaction: "fluid",
-            interactionStrength: 0.65,
-            interactionRadius: 0.42,
-            interactionViscosity: 0.65,
-            magnify: 1.07,
+            interactionStrength: 0.9,
+            interactionRadius: 0.6,
+            interactionViscosity: 0.55,
+            magnify: 1.22,
             tint: "rgba(255, 255, 255, 0.08)",
             helper: false,
             on: {
@@ -1119,7 +1099,7 @@
         }
       }
 
-      /* 4. On-Demand Smooth Waveform Animator (Runs ONLY while streaming so idle scrolling is 120fps) */
+      /* 4. On-Demand Smooth Waveform Animator (Runs ONLY while streaming) */
       const SAMPLE_COUNT = 38;
       const waveSamples = new Array(SAMPLE_COUNT).fill(0);
       let wavePhase = 0;
@@ -1141,7 +1121,7 @@
         const pathEl = document.getElementById("waveform-path");
         if (pathEl) {
           if (!isStreamRunning && smoothedPeak < 0.01) {
-            pathEl.setAttribute("d", "M0,14 L320,14");
+            pathEl.setAttribute("d", "M0,13 L320,13");
             return;
           }
 
@@ -1162,7 +1142,7 @@
           waveSamples.push(nextVal);
 
           const w = 320;
-          const h = 28;
+          const h = 26;
           const mid = h / 2;
           const step = w / (SAMPLE_COUNT - 1);
           let d = "";
@@ -1190,59 +1170,328 @@
         }
       });
 
-      /* 5. Control Center Style Elastic Slider Binding */
-      function bindElasticSlider(sliderId, fillId, min, max, step, onChange) {
+      /* =====================================================================
+         5. 120FPS LIQUID GLASS SLIDER PHYSICS ENGINE (Volume & Jitter)
+            - Zero step-jumping! Continuous sub-pixel spring interpolation.
+            - When touched/dragged, the .liquidGL thumb swells into a large
+              transparent liquid droplet & stretches with finger velocity,
+              warping the colorful track beneath it in real time!
+         ===================================================================== */
+      function createLiquidGlassSlider({
+        sliderId,
+        fillId,
+        knobId,
+        readoutId,
+        min,
+        max,
+        initialValue,
+        formatReadout,
+        onCommitValue,
+      }) {
         const slider = document.getElementById(sliderId);
         const fill = document.getElementById(fillId);
-        let dragging = false;
+        const knob = document.getElementById(knobId);
+        const readout = document.getElementById(readoutId);
 
-        const updateFromClientX = (clientX) => {
+        let targetRatio = (initialValue - min) / (max - min);
+        let currentRatio = targetRatio;
+        let velocityRatio = 0;
+
+        let targetPress = 0; // 0 = rest, 1 = inflated liquid glass droplet
+        let currentPress = 0;
+        let pressVel = 0;
+
+        let dragging = false;
+        let animRaf = null;
+        let lastNativePostTime = 0;
+
+        function renderThumbGeometry() {
           const rect = slider.getBoundingClientRect();
-          const ratio = Math.min(
+          const trackW = rect.width || 320;
+
+          const clampedRatio = Math.min(1, Math.max(0, currentRatio));
+          const pct = clampedRatio * 100;
+          fill.style.width = `${pct.toFixed(2)}%`;
+
+          // Liquid droplet inflation + velocity elongation
+          const speedStretch = Math.min(14, Math.abs(velocityRatio) * 340);
+          const w = 32 + currentPress * 12 + speedStretch;
+          const h = 26 + currentPress * 6 - speedStretch * 0.22;
+
+          const centerX = clampedRatio * trackW;
+          const leftPx = Math.min(
+            trackW - w * 0.65,
+            Math.max(-w * 0.35, centerX - w / 2),
+          );
+          const topPx = (38 - h) / 2;
+
+          knob.style.width = `${w.toFixed(1)}px`;
+          knob.style.height = `${h.toFixed(1)}px`;
+          knob.style.left = `${leftPx.toFixed(1)}px`;
+          knob.style.top = `${topPx.toFixed(1)}px`;
+          knob.style.background =
+            currentPress > 0.15
+              ? `rgba(255, 255, 255, ${(0.22 - currentPress * 0.14).toFixed(2)})`
+              : "rgba(255, 255, 255, 0.24)";
+
+          triggerLiquidGLRender();
+        }
+
+        function stepSpring() {
+          animRaf = null;
+
+          // Position spring (stiff & responsive so it tracks finger at 120Hz)
+          const posForce = (targetRatio - currentRatio) * 0.34;
+          velocityRatio = (velocityRatio + posForce) * 0.66;
+          currentRatio += velocityRatio;
+
+          // Droplet inflation spring (bouncy iOS 26 liquid swell)
+          const pressForce = (targetPress - currentPress) * 0.26;
+          pressVel = (pressVel + pressForce) * 0.72;
+          currentPress = Math.max(0, Math.min(1.35, currentPress + pressVel));
+
+          renderThumbGeometry();
+
+          const posSettled =
+            Math.abs(targetRatio - currentRatio) < 0.0005 &&
+            Math.abs(velocityRatio) < 0.0005;
+          const pressSettled =
+            Math.abs(targetPress - currentPress) < 0.002 &&
+            Math.abs(pressVel) < 0.002;
+
+          if (!posSettled || !pressSettled || dragging) {
+            animRaf = requestAnimationFrame(stepSpring);
+          } else {
+            currentRatio = targetRatio;
+            currentPress = targetPress;
+            renderThumbGeometry();
+          }
+        }
+
+        function ensureAnimating() {
+          if (animRaf === null) {
+            animRaf = requestAnimationFrame(stepSpring);
+          }
+        }
+
+        function updateFromPointer(clientX, forceSend) {
+          const rect = slider.getBoundingClientRect();
+          if (!rect.width) return;
+          targetRatio = Math.min(
             1,
             Math.max(0, (clientX - rect.left) / rect.width),
           );
-          const rawVal = min + ratio * (max - min);
-          const stepped = Math.round(rawVal / step) * step;
-          const clamped = Math.min(max, Math.max(min, stepped));
-          const pct = ((clamped - min) / (max - min)) * 100;
-          fill.style.width = `${pct}%`;
-          onChange(clamped);
-        };
+          const val = min + targetRatio * (max - min);
+          if (readout) {
+            readout.textContent = formatReadout(val);
+          }
+
+          const now = performance.now();
+          if (forceSend || now - lastNativePostTime >= 28) {
+            lastNativePostTime = now;
+            onCommitValue(val);
+          }
+          ensureAnimating();
+        }
 
         slider.addEventListener("pointerdown", (e) => {
           dragging = true;
-          slider.classList.add("dragging");
+          targetPress = 1;
           slider.setPointerCapture(e.pointerId);
-          updateFromClientX(e.clientX);
+          updateFromPointer(e.clientX, true);
         });
 
         slider.addEventListener("pointermove", (e) => {
           if (!dragging) return;
-          updateFromClientX(e.clientX);
+          updateFromPointer(e.clientX, false);
         });
 
-        const endDrag = () => {
+        const endDrag = (e) => {
           if (!dragging) return;
           dragging = false;
-          slider.classList.remove("dragging");
+          targetPress = 0;
+          if (e && typeof e.clientX === "number") {
+            updateFromPointer(e.clientX, true);
+          }
+          ensureAnimating();
         };
+
         slider.addEventListener("pointerup", endDrag);
         slider.addEventListener("pointercancel", endDrag);
+
+        requestAnimationFrame(renderThumbGeometry);
+        window.addEventListener("resize", renderThumbGeometry);
 
         return {
           isDragging: () => dragging,
           setValue: (val) => {
             if (dragging) return;
-            const clamped = Math.min(max, Math.max(min, val));
-            const pct = ((clamped - min) / (max - min)) * 100;
-            fill.style.width = `${pct}%`;
+            const nextRatio = Math.min(
+              1,
+              Math.max(0, (val - min) / (max - min)),
+            );
+            if (Math.abs(nextRatio - targetRatio) > 0.005) {
+              targetRatio = nextRatio;
+              ensureAnimating();
+            }
+          },
+        };
+      }
+
+      /* =====================================================================
+         6. 120FPS LIQUID GLASS TOGGLE SWITCH ENGINE (Turn On / Off)
+            - Supports both tap AND finger drag!
+            - Morphs the .liquidGL thumb into a stretched refractive capsule
+              with spring bounce as it glides between OFF and ON!
+         ===================================================================== */
+      function createLiquidGlassSwitch({
+        rowId,
+        switchId,
+        thumbId,
+        initialOn,
+        onToggle,
+      }) {
+        const row = document.getElementById(rowId);
+        const sw = document.getElementById(switchId);
+        const thumb = document.getElementById(thumbId);
+
+        let isOn = !!initialOn;
+        let targetPos = isOn ? 1 : 0;
+        let currentPos = targetPos;
+        let posVel = 0;
+
+        let targetPress = 0;
+        let currentPress = 0;
+        let pressVel = 0;
+
+        let pointerActive = false;
+        let startX = 0;
+        let dragged = false;
+        let animRaf = null;
+
+        function renderSwitchThumb() {
+          // Track is 58px wide, 34px tall.
+          // Thumb at rest: 28x28px. When pressed/moving: stretches up to 38x28px liquid droplet!
+          const motionStretch = Math.min(10, Math.abs(posVel) * 55);
+          const pressStretch = currentPress * 8;
+          const w = 28 + Math.max(motionStretch, pressStretch);
+          const h = 28 + currentPress * 2;
+
+          const minLeft = 3;
+          const maxLeft = 58 - 3 - w;
+          const clampedPos = Math.min(1.06, Math.max(-0.06, currentPos));
+          const leftPx = minLeft + clampedPos * (maxLeft - minLeft);
+          const topPx = (34 - h) / 2;
+
+          thumb.style.width = `${w.toFixed(1)}px`;
+          thumb.style.height = `${h.toFixed(1)}px`;
+          thumb.style.left = `${leftPx.toFixed(1)}px`;
+          thumb.style.top = `${topPx.toFixed(1)}px`;
+          thumb.style.background =
+            currentPress > 0.1 || Math.abs(posVel) > 0.02
+              ? "rgba(255, 255, 255, 0.12)"
+              : "rgba(255, 255, 255, 0.28)";
+
+          sw.classList.toggle("on", currentPos >= 0.5);
+          triggerLiquidGLRender();
+        }
+
+        function stepSwitchSpring() {
+          animRaf = null;
+
+          // Bouncy iOS 26 spring for thumb travel
+          const force = (targetPos - currentPos) * 0.26;
+          posVel = (posVel + force) * 0.72;
+          currentPos += posVel;
+
+          const pForce = (targetPress - currentPress) * 0.28;
+          pressVel = (pressVel + pForce) * 0.7;
+          currentPress = Math.max(0, Math.min(1.2, currentPress + pressVel));
+
+          renderSwitchThumb();
+
+          const posDone =
+            Math.abs(targetPos - currentPos) < 0.001 &&
+            Math.abs(posVel) < 0.001;
+          const pressDone =
+            Math.abs(targetPress - currentPress) < 0.002 &&
+            Math.abs(pressVel) < 0.002;
+
+          if (!posDone || !pressDone || pointerActive) {
+            animRaf = requestAnimationFrame(stepSwitchSpring);
+          } else {
+            currentPos = targetPos;
+            currentPress = targetPress;
+            renderSwitchThumb();
+          }
+        }
+
+        function ensureAnimating() {
+          if (animRaf === null) {
+            animRaf = requestAnimationFrame(stepSwitchSpring);
+          }
+        }
+
+        function commitState(nextOn, notifyNative) {
+          isOn = !!nextOn;
+          targetPos = isOn ? 1 : 0;
+          ensureAnimating();
+          if (notifyNative) {
+            onToggle(isOn);
+          }
+        }
+
+        row.addEventListener("pointerdown", (e) => {
+          pointerActive = true;
+          dragged = false;
+          startX = e.clientX;
+          targetPress = 1;
+          row.setPointerCapture(e.pointerId);
+          ensureAnimating();
+        });
+
+        row.addEventListener("pointermove", (e) => {
+          if (!pointerActive) return;
+          const dx = e.clientX - startX;
+          if (Math.abs(dx) > 6) {
+            dragged = true;
+            const swRect = sw.getBoundingClientRect();
+            const ratio = (e.clientX - swRect.left) / (swRect.width || 58);
+            targetPos = Math.min(1, Math.max(0, ratio));
+            ensureAnimating();
+          }
+        });
+
+        const finishPointer = () => {
+          if (!pointerActive) return;
+          pointerActive = false;
+          targetPress = 0;
+          if (dragged) {
+            commitState(targetPos >= 0.5, true);
+          } else {
+            commitState(!isOn, true);
+          }
+        };
+
+        row.addEventListener("pointerup", finishPointer);
+        row.addEventListener("pointercancel", finishPointer);
+
+        requestAnimationFrame(renderSwitchThumb);
+
+        return {
+          setOn: (nextOn) => {
+            if (pointerActive) return;
+            if (!!nextOn !== isOn) {
+              commitState(!!nextOn, false);
+            }
           },
         };
       }
 
       let volumeControl = null;
       let bufferControl = null;
+      let mixSwitchControl = null;
+      let duckSwitchControl = null;
       let lastEndpointsKey = "";
 
       function setTextIfChanged(id, text) {
@@ -1254,6 +1503,56 @@
       }
 
       document.addEventListener("DOMContentLoaded", () => {
+        // Initialize 120fps Liquid Glass Sliders
+        volumeControl = createLiquidGlassSlider({
+          sliderId: "slider-volume",
+          fillId: "fill-volume",
+          knobId: "knob-volume",
+          readoutId: "vol-readout",
+          min: 0,
+          max: 200,
+          initialValue: 100,
+          formatReadout: (val) => `${Math.round(val)}%`,
+          onCommitValue: (val) => {
+            postToNative({ action: "setVolume", value: val / 100.0 });
+          },
+        });
+
+        bufferControl = createLiquidGlassSlider({
+          sliderId: "slider-buffer",
+          fillId: "fill-buffer",
+          knobId: "knob-buffer",
+          readoutId: "buf-readout",
+          min: 20,
+          max: 100,
+          initialValue: 45,
+          formatReadout: (val) => `${Math.round(val)} ms`,
+          onCommitValue: (val) => {
+            postToNative({ action: "setBufferMs", value: Math.round(val) });
+          },
+        });
+
+        // Initialize 120fps Liquid Glass Toggle Switches
+        mixSwitchControl = createLiquidGlassSwitch({
+          rowId: "toggle-mix",
+          switchId: "switch-mix",
+          thumbId: "thumb-mix",
+          initialOn: false,
+          onToggle: (next) => {
+            postToNative({ action: "setMixWithOthers", value: next });
+          },
+        });
+
+        duckSwitchControl = createLiquidGlassSwitch({
+          rowId: "toggle-duck",
+          switchId: "switch-duck",
+          thumbId: "thumb-duck",
+          initialOn: false,
+          onToggle: (next) => {
+            postToNative({ action: "setDuckOthers", value: next });
+          },
+        });
+
         initLiquidGLOnce();
 
         window.addEventListener("resize", () => {
@@ -1307,51 +1606,10 @@
             postToNative({ action: "toggleStream", ip, port });
           });
 
-        // Elastic Volume Slider (0% to 200%)
-        volumeControl = bindElasticSlider(
-          "slider-volume",
-          "fill-volume",
-          0,
-          200,
-          5,
-          (pct) => {
-            setTextIfChanged("vol-readout", `${Math.round(pct)}%`);
-            postToNative({ action: "setVolume", value: pct / 100.0 });
-          },
-        );
-
-        // Elastic Buffer Slider (20ms to 100ms)
-        bufferControl = bindElasticSlider(
-          "slider-buffer",
-          "fill-buffer",
-          20,
-          100,
-          5,
-          (ms) => {
-            setTextIfChanged("buf-readout", `${Math.round(ms)} ms`);
-            postToNative({ action: "setBufferMs", value: ms });
-          },
-        );
-
-        // iOS Switches
-        document.getElementById("toggle-mix").addEventListener("click", () => {
-          const sw = document.getElementById("switch-mix");
-          const next = !sw.classList.contains("on");
-          sw.classList.toggle("on", next);
-          postToNative({ action: "setMixWithOthers", value: next });
-        });
-
-        document.getElementById("toggle-duck").addEventListener("click", () => {
-          const sw = document.getElementById("switch-duck");
-          const next = !sw.classList.contains("on");
-          sw.classList.toggle("on", next);
-          postToNative({ action: "setDuckOthers", value: next });
-        });
-
-        setTimeout(signalReadyOnce, 500);
+        setTimeout(signalReadyOnce, 450);
       });
 
-      /* 6. Live State Receiver called from Swift (Zero-Reflow Diffed Updates) */
+      /* 7. Live State Receiver called from Swift */
       window.updateAppState = function (state) {
         if (!state) return;
 
@@ -1488,18 +1746,14 @@
         }
 
         // Toggles
-        if (typeof state.mixWithOthers === "boolean") {
-          document
-            .getElementById("switch-mix")
-            .classList.toggle("on", state.mixWithOthers);
+        if (mixSwitchControl && typeof state.mixWithOthers === "boolean") {
+          mixSwitchControl.setOn(state.mixWithOthers);
         }
-        if (typeof state.duckOthers === "boolean") {
-          document
-            .getElementById("switch-duck")
-            .classList.toggle("on", state.duckOthers);
+        if (duckSwitchControl && typeof state.duckOthers === "boolean") {
+          duckSwitchControl.setOn(state.duckOthers);
         }
 
-        // Discovered PC Endpoints (ResizeObserver inside liquidGL automatically adapts the card lens!)
+        // Discovered PC Endpoints
         if (Array.isArray(state.endpoints)) {
           const key = JSON.stringify(state.endpoints) + "|" + isStreamRunning;
           if (key !== lastEndpointsKey) {
