@@ -19,7 +19,10 @@ struct ContentView: View {
         NavigationStack {
             ZStack {
                 LinearGradient(
-                    colors: [Color(red: 0.06, green: 0.07, blue: 0.09), Color(red: 0.1, green: 0.1, blue: 0.13)],
+                    colors: [
+                        Color(red: 0.16, green: 0.17, blue: 0.20),
+                        Color(red: 0.12, green: 0.13, blue: 0.16)
+                    ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -40,7 +43,7 @@ struct ContentView: View {
             }
             .navigationTitle("AirPulse")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 ipDraft = manualIpAddress
                 portDraft = manualPortString
@@ -84,7 +87,7 @@ struct ContentView: View {
                     .font(.system(size: 28, weight: .bold, design: .default))
                 Text("PC → iPhone audio bridge")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary.opacity(0.9))
             }
             Spacer()
             HStack(spacing: 6) {
@@ -151,7 +154,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+        .background(.white.opacity(0.1), in: .rect(cornerRadius: 14))
     }
 
     private var waveformView: some View {
@@ -178,7 +181,7 @@ struct ContentView: View {
         }
         .frame(height: 44)
         .padding(.vertical, 4)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+        .background(.white.opacity(0.1), in: .rect(cornerRadius: 14))
     }
 
     private var discoveryCard: some View {
@@ -210,7 +213,7 @@ struct ContentView: View {
                     Spacer()
                 }
                 .padding(12)
-                .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+                .background(.white.opacity(0.1), in: .rect(cornerRadius: 14))
             } else {
                 ForEach(bleScanner.discoveredEndpoints) { ep in
                     HStack {
@@ -230,7 +233,7 @@ struct ContentView: View {
                         .buttonStyle(.glass)
                     }
                     .padding(12)
-                    .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+                    .background(.white.opacity(0.1), in: .rect(cornerRadius: 14))
                 }
             }
 
@@ -240,14 +243,14 @@ struct ContentView: View {
                     .autocorrectionDisabled()
                     .keyboardType(.numbersAndPunctuation)
                     .padding(12)
-                    .background(.white.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .background(.white.opacity(0.12), in: .rect(cornerRadius: 12))
                     .onChange(of: ipDraft) { _, _ in scheduleProbe() }
                 TextField("Port", text: $portDraft)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.numberPad)
                     .frame(width: 90)
                     .padding(12)
-                    .background(.white.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .background(.white.opacity(0.12), in: .rect(cornerRadius: 12))
                     .onChange(of: portDraft) { _, _ in scheduleProbe() }
             }
 
