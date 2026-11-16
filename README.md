@@ -1,120 +1,120 @@
 # AirPulse (PC-to-iPhone Audio Streamer)
 
-Truyền âm thanh thời gian thực độ trễ thấp từ **Windows 11** sang **iPhone** qua Wi-Fi/LAN (UDP), có tự động tìm PC (Wi-Fi beacon + BLE), chạy nền/khóa màn hình và tùy chọn trộn với âm thanh app khác trên iPhone.
+Stream audio in real time with low latency from **Windows 11** to an **iPhone** over Wi-Fi/LAN (UDP). Includes automatic PC discovery (Wi-Fi beacon + BLE), background/lock-screen playback, and optional audio mixing with other iPhone apps.
 
-- **iOS Receiver:** SwiftUI native (Liquid Glass/system effects), target iOS 26+.
-- **Windows Sender:** .NET 9 WPF + WASAPI loopback, phát hiện tự động qua UDP beacon/BLE.
+- **iOS Receiver:** Native SwiftUI (system Liquid Glass effects), targets iOS 26+.
+- **Windows Sender:** .NET 9 WPF + WASAPI loopback, advertises via UDP beacon/BLE.
 
-## Tính năng chính
+## Key Features
 
-- Tự động tìm PC trong mạng nội bộ (UDP beacon/GATT), chọn endpoint ổn định khi PC có nhiều card mạng.
-- Stream âm thanh PC → iPhone, điều chỉnh buffer/jitter và âm lượng.
-- Hỗ trợ audio nền, Lock Screen / Control Center / Dynamic Island (tùy cấu hình session).
-- Tùy chọn **Mix With Other iPhone Apps** và **Duck Other Audio**.
+- Automatic PC discovery on the local network (UDP beacon/GATT) and stable endpoint selection when a PC has multiple network interfaces.
+- PC → iPhone audio streaming with adjustable jitter/buffer and volume.
+- Background audio with Lock Screen / Control Center / Dynamic Island support (depending on session settings).
+- **Mix With Other iPhone Apps** and **Duck Other Audio** options.
 
-## Cấu trúc repo
+## Repository Structure
 
 ```text
 .
-├─ windows-sender/                 # App phát âm thanh trên Windows 11 (C# .NET 9 WPF)
-│  ├─ Audio/                       # WASAPI loopback, đóng gói/gửi UDP
+├─ windows-sender/                 # Windows 11 sender app (C# .NET 9 WPF)
+│  ├─ Audio/                       # WASAPI loopback capture and UDP send/packetization
 │  ├─ Discovery/                   # BLE/UDP beacon discovery
-│  ├─ Protocol/                    # Định dạng gói tin
+│  ├─ Protocol/                    # Packet format definitions
 │  ├─ PcAudioStreamer.csproj
-│  └─ publish/PcAudioStreamer.exe  # (nếu có) bản build sẵn
-├─ ios-receiver/                   # App nhận âm thanh trên iOS (SwiftUI native)
-│  ├─ project.yml                  # Cấu hình XcodeGen
+│  └─ publish/PcAudioStreamer.exe  # (if present) prebuilt executable
+├─ ios-receiver/                   # iOS receiver app (native SwiftUI)
+│  ├─ project.yml                  # XcodeGen configuration
 │  └─ PCAudioReceiver/
 │     ├─ Audio/                    # AVAudioSession, decode/playback
-│     ├─ Bluetooth/                # Quét BLE/beacon, chọn endpoint
-│     ├─ Network/                   # Nhận UDP, probe/handshake, buffer
-│     └─ Views/                    # Giao diện SwiftUI
-├─ .github/workflows/ios-build.yml # CI build IPA (unsigned) + Windows sender
-├─ open-firewall-ports.ps1         # Mở UDP 49152-49153 trên Windows
+│     ├─ Bluetooth/                # BLE/beacon scanning, endpoint selection
+│     ├─ Network/                   # UDP receive, probe/handshake, buffering
+│     └─ Views/                    # SwiftUI interface
+├─ .github/workflows/ios-build.yml # CI: build unsigned IPA + Windows sender
+├─ open-firewall-ports.ps1         # Opens UDP 49152-49153 on Windows
 └─ README.md
 ```
 
-## Yêu cầu
+## Requirements
 
-- **PC:** Windows 10/11 (khuyến nghị Windows 11), quyền Administrator để mở firewall (lần đầu).
-- **iPhone:** iOS 26 trở lên (app dùng API `.glassEffect`/native glass). Cùng mạng Wi-Fi/LAN với PC để auto-discovery/stream ổn định.
-- **Cài iOS không cần Mac:** Apple ID + [Sideloadly](https://sideloadly.io/) hoặc [SideStore](https://sidestore.io/) (IPA trong repo/CI là **unsigned**).
-- **Tự build (tuỳ chọn):**
-  - Windows sender: [.NET 9 SDK](https://dotnet.microsoft.com/download).
-  - iOS trên macOS: Xcode (SDK iOS 26+), [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+- **PC:** Windows 10/11 (Windows 11 recommended). Administrator rights are needed once to open firewall ports.
+- **iPhone:** iOS 26 or later (the app uses system `.glassEffect` APIs). PC and iPhone should be on the same Wi-Fi/LAN for reliable discovery and streaming.
+- **Install on iOS without a Mac:** Apple ID + [Sideloadly](https://sideloadly.io/) or [SideStore](https://sidestore.io/) (IPAs in this repo/CI are **unsigned**).
+- **Optional, to build from source:**
+  - Windows sender: [.NET 9 SDK](https://dotnet.microsoft.com/download)
+  - iOS on macOS: Xcode (iOS 26+ SDK) and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
-## Setup từ A-Z
+## Setup from A to Z
 
-### A. Lấy mã nguồn
+### A. Get the source
 
 ```powershell
 git clone https://github.com/LeNguyenPKhanh/AirPulse.git
 cd AirPulse
 ```
 
-### B. Cấu hình & chạy Windows Sender (PC)
+### B. Configure and run the Windows Sender (PC)
 
-1. **Mở cổng UDP (chỉ cần 1 lần, chạy PowerShell as Administrator):**
+1. **Open UDP ports (one-time, run PowerShell as Administrator):**
    ```powershell
    .\open-firewall-ports.ps1
    ```
-   Mở inbound UDP **49152, 49153** (profile Private/Domain).
+   This allows inbound UDP **49152** and **49153** (Private/Domain profiles).
 
-2. **Chạy sender:**
-   - Dùng bản build sẵn (nếu có trong repo):
+2. **Run the sender:**
+   - Use the prebuilt executable (if present in the repo):
      ```powershell
      .\windows-sender\publish\PcAudioStreamer.exe
      ```
-   - Hoặc chạy/build từ source:
+   - Or run from source:
      ```powershell
      dotnet run --project .\windows-sender\PcAudioStreamer.csproj -c Release
      ```
-   - Hoặc publish self-contained (giống CI):
+   - Or publish a self-contained build (same approach as CI):
      ```powershell
      dotnet publish .\windows-sender\PcAudioStreamer.csproj -c Release -r win-x64 --self-contained true -o .\windows-sender\publish
      .\windows-sender\publish\PcAudioStreamer.exe
      ```
 
-3. Trên app Windows: chọn thiết bị âm thanh (WASAPI loopback) và nhấn **Start/Stream**. Đảm bảo PC và iPhone cùng mạng.
+3. In the Windows app, select the audio output device (WASAPI loopback) and press **Start/Stream**. Make sure the PC and iPhone are on the same network.
 
-### C. Cài iOS Receiver lên iPhone
+### C. Install the iOS Receiver on iPhone
 
-#### Cách 1 (khuyến nghị, không cần Mac): dùng GitHub Actions + sideload
+#### Option 1 (recommended, no Mac required): GitHub Actions + sideload
 
-1. Fork/đẩy repo lên GitHub của bạn (hoặc dùng repo này).
-2. Vào tab **Actions** → workflow **Build iOS Receiver (.ipa) & Windows 11 Sender** → chạy (`workflow_dispatch`) hoặc push lên `main/master`.
-3. Mở run đã hoàn tất → tải artifact **`PCAudioReceiver-iOS-IPA`** (chứa `PCAudioReceiver-unsigned.ipa`).
-4. Dùng **Sideloadly** hoặc **SideStore** trên Windows/macOS để ký bằng Apple ID và cài vào iPhone.
-   - Apple ID miễn phí: chứng chỉ thường hết hạn sau 7 ngày, cần cài lại/refresh.
-   - Lần đầu cần tin cậy developer profile trên iPhone (Settings → General → VPN & Device Management).
+1. Fork/push this repo to your GitHub account (or use this repo directly).
+2. Open the **Actions** tab → run the **Build iOS Receiver (.ipa) & Windows 11 Sender** workflow (`workflow_dispatch`) or push to `main`/`master`.
+3. Open the completed run and download the **`PCAudioReceiver-iOS-IPA`** artifact (contains `PCAudioReceiver-unsigned.ipa`). You can also use an unsigned `.ipa` committed in this repo if available.
+4. Use **Sideloadly** or **SideStore** (Windows/macOS) to sign with your Apple ID and install it on your iPhone.
+   - With a free Apple ID, the signing certificate typically expires after 7 days and must be reinstalled/refreshed.
+   - On first install, trust the developer profile on iPhone (Settings → General → VPN & Device Management).
 
-#### Cách 2: build trên macOS (có Xcode)
+#### Option 2: Build on macOS (with Xcode)
 
 ```bash
 cd ios-receiver
 xcodegen generate
 open PCAudioReceiver.xcodeproj
 ```
-Chọn team/signing trong Xcode (hoặc build unsigned theo CI) rồi chạy lên iPhone (iOS 26+).
+Select your team/signing in Xcode (or build unsigned like CI) and run on an iPhone (iOS 26+).
 
-### D. Kết nối và sử dụng
+### D. Connect and use
 
-1. Chạy sender trên Windows và bắt đầu stream.
-2. Mở **AirPulse** trên iPhone: app sẽ tự tìm PC (BLE/Wi-Fi). Nhấn **Rescan** nếu cần.
-3. Chọn PC (nếu hiện) hoặc để app tự chọn endpoint phù hợp, sau đó nhấn **Start Audio Stream**.
-4. Tuỳ chỉnh: âm lượng, jitter buffer, **Mix With Other iPhone Apps** / **Duck Other Audio**.
+1. Start streaming from the Windows sender.
+2. Open **AirPulse** on iPhone: the app will discover PCs automatically (BLE/Wi-Fi). Tap **Rescan** if needed.
+3. Select a PC (if shown) or let the app pick the best endpoint, then tap **Start Audio Stream**.
+4. Adjust volume, jitter buffer, and toggles for **Mix With Other iPhone Apps** / **Duck Other Audio**.
 
-## Ghi chú & xử lý sự cố
+## Notes & Troubleshooting
 
-- **Không thấy PC:** kiểm tra cùng mạng/Wi-Fi, firewall đã mở UDP 49152-49153, và sender đang chạy/stream.
-- **PC nhiều card mạng (Ethernet/Wi-Fi/vEthernet):** app gộp theo PC và ưu tiên endpoint ổn định (`UDP Probe > Wi-Fi Beacon > BLE...`). Nếu PC phát tên khác nhau theo nguồn, có thể cần định danh cố định từ phía sender.
-- **Nhắc/popup ghép nối Bluetooth (pairing) của iOS:** là hành vi hệ thống khi truy cập Bluetooth, không phải trạng thái trong UI của app; có thể chấp nhận/từ chối tuỳ nhu cầu discovery.
-- **IPA unsigned:** phải ký/sideload trước khi cài; không cài trực tiếp như app App Store.
-- **Yêu cầu iOS 26+:** do dùng hiệu ứng kính hệ thống; máy iOS thấp hơn có thể không tương thích build này.
+- **PC not found:** ensure both devices are on the same network, UDP 49152-49153 is allowed by firewall, and the sender is running/streaming.
+- **PC with multiple NICs (Ethernet/Wi-Fi/vEthernet):** the app groups endpoints per PC and prefers the most stable one (`UDP Probe > Wi-Fi Beacon > BLE...`). If the PC advertises different names per interface, a fixed sender-side identifier may be needed for perfect grouping.
+- **iOS system Bluetooth pairing prompt:** this is an OS-level prompt when Bluetooth is accessed, not an in-app status; accept/deny based on your discovery needs.
+- **Unsigned IPA:** must be signed/sideloaded before installation; it cannot be installed directly like an App Store app.
+- **iOS 26+ required:** the UI uses system glass effects; older iOS versions may be incompatible with this build.
 
 ## Ports
 
-| Port  | Giao thức | Mục đích                          |
-|-------|-----------|-----------------------------------|
-| 49152 | UDP       | Audio stream / probe / handshake  |
-| 49153 | UDP       | LAN discovery beacon              |
+| Port  | Protocol | Purpose                          |
+|-------|----------|----------------------------------|
+| 49152 | UDP      | Audio stream / probe / handshake |
+| 49153 | UDP      | LAN discovery beacon             |
