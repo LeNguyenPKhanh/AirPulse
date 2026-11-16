@@ -70,7 +70,7 @@ jobs:
       - name: Publish Windows 11 Sender
         working-directory: windows-sender
         run: |
-          dotnet publish PcAudioStreamer.csproj -c Release -r win-x64 --self-contained false -o publish
+          dotnet publish PcAudioStreamer.csproj -c Release -r win-x64 --self-contained true -o publish
 
       - name: Upload Windows 11 Sender Artifact
         uses: actions/upload-artifact@v4
